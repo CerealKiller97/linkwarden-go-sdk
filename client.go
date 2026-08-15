@@ -26,6 +26,10 @@ type Client struct {
 	Collections *CollectionsService
 	Tags        *TagsService
 	Tokens      *TokensService
+	RSS         *RSSService
+	Search      *SearchService
+	Dashboard   *DashboardService
+	Highlights  *HighlightsService
 }
 
 // Option configures a Client.
@@ -63,6 +67,10 @@ func New(baseURL, token string, opts ...Option) *Client {
 	c.Collections = &CollectionsService{c: c}
 	c.Tags = &TagsService{c: c}
 	c.Tokens = &TokensService{c: c}
+	c.RSS = &RSSService{c: c}
+	c.Search = &SearchService{c: c}
+	c.Dashboard = &DashboardService{c: c}
+	c.Highlights = &HighlightsService{c: c}
 
 	return c
 }

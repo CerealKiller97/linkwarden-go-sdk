@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -30,6 +31,10 @@ type Client struct {
 	Search      *SearchService
 	Dashboard   *DashboardService
 	Highlights  *HighlightsService
+	Archives    *ArchivesService
+	Config      *ConfigService
+	Favicon     *FaviconService
+	Migrations  *MigrationsService
 }
 
 // Option configures a Client.
@@ -71,6 +76,10 @@ func New(baseURL, token string, opts ...Option) *Client {
 	c.Search = &SearchService{c: c}
 	c.Dashboard = &DashboardService{c: c}
 	c.Highlights = &HighlightsService{c: c}
+	c.Archives = &ArchivesService{c: c}
+	c.Config = &ConfigService{c: c}
+	c.Favicon = &FaviconService{c: c}
+	c.Migrations = &MigrationsService{c: c}
 
 	return c
 }
@@ -138,6 +147,35 @@ func (c *Client) request(ctx context.Context, opt requestOptions) (*http.Respons
 	}
 
 	return resp, respBody, nil
+}
+
+// buildMultipartBody encodes fields and a file part (under fileField, with the given
+// filename) as a multipart/form-data body, returning the body reader and the
+// Content-Type header (including boundary) to send alongside it.
+func buildMultipartBody(fields map[string]string, fileField, filename string, r io.Reader) (io.Reader, string, error) {
+	buf := &bytes.Buffer{}
+	w := multipart.NewWriter(buf)
+
+	for k, v := range fields {
+		if err := w.WriteField(k, v); err != nil {
+			return nil, "", fmt.Errorf("write field %q: %w", k, err)
+		}
+	}
+
+	part, err := w.CreateFormFile(fileField, filename)
+	if err != nil {
+		return nil, "", fmt.Errorf("create form file: %w", err)
+	}
+
+	if _, err := io.Copy(part, r); err != nil {
+		return nil, "", fmt.Errorf("copy file contents: %w", err)
+	}
+
+	if err := w.Close(); err != nil {
+		return nil, "", fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	return buf, w.FormDataContentType(), nil
 }
 
 // decodeResponseEnvelope unwraps the common {"response": T} envelope shape.

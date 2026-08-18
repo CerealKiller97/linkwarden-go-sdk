@@ -50,7 +50,11 @@ func (s *ArchivesService) Get(ctx context.Context, linkID int, format ArchiveFor
 		return nil, err
 	}
 
-	file := &ArchiveFile{Data: body, ContentType: resp.Header.Get("Content-Type")}
+	file := &ArchiveFile{
+		Data:        body,
+		ContentType: resp.Header.Get("Content-Type"),
+	}
+
 	if _, params, perr := mime.ParseMediaType(resp.Header.Get("Content-Disposition")); perr == nil {
 		file.Filename = params["filename"]
 	}

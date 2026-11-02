@@ -8,12 +8,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
-
-	"github.com/rs/zerolog"
 )
 
 // Client is a Linkwarden API client. Construct one with New.
@@ -21,7 +20,7 @@ type Client struct {
 	baseURL    string
 	token      string
 	httpClient *http.Client
-	logger     zerolog.Logger
+	logger     *slog.Logger
 
 	Links       *LinksService
 	Collections *CollectionsService
@@ -48,9 +47,12 @@ func WithHTTPClient(hc *http.Client) Option {
 }
 
 // WithLogger overrides the default (no-op) logger used for internal diagnostics.
-func WithLogger(logger zerolog.Logger) Option {
+// A nil logger is ignored.
+func WithLogger(logger *slog.Logger) Option {
 	return func(c *Client) {
-		c.logger = logger
+		if logger != nil {
+			c.logger = logger
+		}
 	}
 }
 
@@ -61,7 +63,7 @@ func New(baseURL, token string, opts ...Option) *Client {
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		token:      token,
 		httpClient: http.DefaultClient,
-		logger:     zerolog.Nop(),
+		logger:     slog.New(slog.DiscardHandler),
 	}
 
 	for _, opt := range opts {
@@ -133,7 +135,7 @@ func (c *Client) request(ctx context.Context, opt requestOptions) (*http.Respons
 	}
 	defer func() {
 		if cerr := resp.Body.Close(); cerr != nil {
-			c.logger.Err(cerr).Msg("failed to close response body")
+			c.logger.Error("failed to close response body", slog.Any("error", cerr))
 		}
 	}()
 

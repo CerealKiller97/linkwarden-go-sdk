@@ -127,6 +127,33 @@ func TestCollectionsService_Update_KeepsUnsetFields(t *testing.T) {
 	assert.Equal("#10b981", got.Color)
 }
 
+func TestCollectionsService_Update_IsPublic(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+
+	_, err := client.Collections.Update(t.Context(), collection.ID, UpdateCollectionRequest{IsPublic: new(true)})
+	assert.NoError(err)
+	got, err := client.Collections.Get(t.Context(), collection.ID)
+	assert.NoError(err)
+	assert.True(got.IsPublic)
+
+	// Leaving IsPublic nil keeps it public…
+	_, err = client.Collections.Update(t.Context(), collection.ID, UpdateCollectionRequest{Color: "#10b981"})
+	assert.NoError(err)
+	got, err = client.Collections.Get(t.Context(), collection.ID)
+	assert.NoError(err)
+	assert.True(got.IsPublic)
+
+	// …and an explicit false makes it private again.
+	_, err = client.Collections.Update(t.Context(), collection.ID, UpdateCollectionRequest{IsPublic: new(false)})
+	assert.NoError(err)
+	got, err = client.Collections.Get(t.Context(), collection.ID)
+	assert.NoError(err)
+	assert.False(got.IsPublic)
+}
+
 func TestCollectionsService_Delete(t *testing.T) {
 	assert := require.New(t)
 

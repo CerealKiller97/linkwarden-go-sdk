@@ -48,14 +48,16 @@ type CreateCollectionRequest struct {
 
 // UpdateCollectionRequest is the payload for CollectionsService.Update.
 type UpdateCollectionRequest struct {
-	Name        string   `json:"name,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Color       string   `json:"color,omitempty"`
-	Icon        string   `json:"icon,omitempty"`
-	IconWeight  string   `json:"iconWeight,omitempty"`
-	ParentID    int      `json:"parentId,omitempty"`
-	IsPublic    bool     `json:"isPublic,omitempty"`
-	Members     []Member `json:"members,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	Color       string `json:"color,omitempty"`
+	Icon        string `json:"icon,omitempty"`
+	IconWeight  string `json:"iconWeight,omitempty"`
+	ParentID    int    `json:"parentId,omitempty"`
+	// IsPublic is a pointer so that making a collection private (false) can be told
+	// apart from leaving it unchanged (nil).
+	IsPublic *bool    `json:"isPublic,omitempty"`
+	Members  []Member `json:"members,omitempty"`
 }
 
 // updateCollectionPayload is the full collection the update endpoint expects.
@@ -149,8 +151,11 @@ func (s *CollectionsService) Update(ctx context.Context, id int, req UpdateColle
 		Icon:        cmp.Or(req.Icon, current.Icon),
 		IconWeight:  cmp.Or(req.IconWeight, current.IconWeight),
 		ParentID:    current.ParentID,
-		IsPublic:    req.IsPublic || current.IsPublic,
+		IsPublic:    current.IsPublic,
 		Members:     current.Members,
+	}
+	if req.IsPublic != nil {
+		payload.IsPublic = *req.IsPublic
 	}
 	if req.ParentID != 0 {
 		payload.ParentID = &req.ParentID

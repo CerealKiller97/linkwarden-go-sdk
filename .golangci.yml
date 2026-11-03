@@ -1,0 +1,17 @@
+version: "2"
+
+linters:
+  default: standard
+  settings:
+    errcheck:
+      # Ignoring Close() errors on files/response bodies opened for reading is a
+      # common, low-risk exception: nothing meaningful can be done with the error
+      # at that point, and it doesn't affect data already read or written.
+      exclude-functions:
+        - (*os.File).Close
+        - (io.Closer).Close
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

@@ -2,6 +2,9 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/CerealKiller97/linkwarden-go-sdk.svg)](https://pkg.go.dev/github.com/CerealKiller97/linkwarden-go-sdk)
 [![test](https://github.com/CerealKiller97/linkwarden-go-sdk/actions/workflows/test.yml/badge.svg)](https://github.com/CerealKiller97/linkwarden-go-sdk/actions/workflows/test.yml)
+[![lint](https://github.com/CerealKiller97/linkwarden-go-sdk/actions/workflows/lint.yml/badge.svg)](https://github.com/CerealKiller97/linkwarden-go-sdk/actions/workflows/lint.yml)
+[![gosec](https://github.com/CerealKiller97/linkwarden-go-sdk/actions/workflows/gosec.yml/badge.svg)](https://github.com/CerealKiller97/linkwarden-go-sdk/actions/workflows/gosec.yml)
+[![govulncheck](https://github.com/CerealKiller97/linkwarden-go-sdk/actions/workflows/govulncheck.yml/badge.svg)](https://github.com/CerealKiller97/linkwarden-go-sdk/actions/workflows/govulncheck.yml)
 
 A typed Go client for the [Linkwarden](https://linkwarden.app) API. It covers links,
 collections, tags, search, archives, migrations, RSS, highlights, tokens and more, and depends
@@ -68,71 +71,7 @@ func main() {
 }
 ```
 
-<details>
-<summary><b>More SDK examples</b></summary>
-
-**Search and list**
-
-```go
-hits, err := client.Search.Links(ctx, linkwarden.SearchOptions{SearchQueryString: "kubernetes"})
-
-pinned, err := client.Links.List(ctx, linkwarden.ListLinksOptions{
-	CollectionID: 7,
-	PinnedOnly:   true,
-})
-```
-
-**Bulk move and retag**
-
-```go
-err := client.Links.BulkUpdate(ctx, linkwarden.BulkUpdateLinksRequest{
-	Links:              []linkwarden.Link{{ID: 412}, {ID: 418}},
-	RemovePreviousTags: true,
-	NewData: linkwarden.BulkUpdateLinksNewData{
-		CollectionID: 7,
-		Tags:         []linkwarden.Tag{{Name: "weekend"}},
-	},
-})
-```
-
-**Download an archived PDF**
-
-```go
-pdf, err := client.Archives.Get(ctx, link.ID, linkwarden.ArchiveFormatPDF, false)
-if err != nil {
-	log.Fatal(err)
-}
-os.WriteFile("effective-go.pdf", pdf.Data, 0o644)
-```
-
-**Back up everything**
-
-```go
-data, err := client.Migrations.Export(ctx)
-if err != nil {
-	log.Fatal(err)
-}
-os.WriteFile("backup.json", data, 0o600)
-```
-
-**Handle API errors**
-
-```go
-_, err := client.Links.Get(ctx, 999999)
-switch {
-case linkwarden.IsNotFound(err):
-	fmt.Println("no such link")
-case linkwarden.IsConflict(err):
-	fmt.Println("already exists")
-case err != nil:
-	var apiErr *linkwarden.APIError
-	if errors.As(err, &apiErr) {
-		fmt.Println(apiErr.StatusCode, apiErr.Message)
-	}
-}
-```
-
-</details>
+### Services
 
 | Service              | What it covers                                        |
 | -------------------- | ----------------------------------------------------- |
@@ -151,6 +90,307 @@ case err != nil:
 
 Options: `WithHTTPClient(*http.Client)` for timeouts, proxies or custom transports, and `WithLogger(*slog.Logger)` for internal diagnostics (defaults to a text handler on stdout; pass `slog.New(slog.DiscardHandler)` to silence it). The SDK depends only on the standard library.
 
+## Examples
+
+The snippets below assume the `client` and `ctx` from the example above.
+
+### Links
+
+<details>
+<summary><b>Search, filter and list</b></summary>
+
+```go
+hits, err := client.Search.Links(ctx, linkwarden.SearchOptions{SearchQueryString: "kubernetes"})
+
+pinned, err := client.Links.List(ctx, linkwarden.ListLinksOptions{
+	CollectionID: 7,
+	PinnedOnly:   true,
+})
+```
+
+</details>
+
+<details>
+<summary><b>Page through every link</b></summary>
+
+Lists are cursor-paginated: pass the ID of the last link you received to get the next page.
+
+```go
+var all []linkwarden.Link
+opts := linkwarden.ListLinksOptions{}
+for {
+	page, err := client.Links.List(ctx, opts)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(page) == 0 {
+		break
+	}
+	all = append(all, page...)
+	opts.Cursor = page[len(page)-1].ID
+}
+```
+
+</details>
+
+<details>
+<summary><b>Update, archive and delete</b></summary>
+
+```go
+// Only the fields you set are changed; the rest are kept from the current link.
+link, err := client.Links.Update(ctx, 412, linkwarden.UpdateLinkRequest{
+	Name: "Effective Go (updated)",
+	Tags: []linkwarden.Tag{{Name: "golang"}},
+})
+
+// Re-run the archiver (screenshot, PDF, readability…) for a link.
+err = client.Links.Archive(ctx, 412)
+
+err = client.Links.Delete(ctx, 412)
+err = client.Links.BulkDelete(ctx, []int{418, 419, 420})
+```
+
+</details>
+
+<details>
+<summary><b>Bulk move and retag</b></summary>
+
+```go
+err := client.Links.BulkUpdate(ctx, linkwarden.BulkUpdateLinksRequest{
+	Links:              []linkwarden.Link{{ID: 412}, {ID: 418}},
+	RemovePreviousTags: true,
+	NewData: linkwarden.BulkUpdateLinksNewData{
+		CollectionID: 7,
+		Tags:         []linkwarden.Tag{{Name: "weekend"}},
+	},
+})
+```
+
+</details>
+
+### Collections and tags
+
+<details>
+<summary><b>Nested collections and sharing</b></summary>
+
+```go
+parent, err := client.Collections.Create(ctx, linkwarden.CreateCollectionRequest{Name: "Programming"})
+
+child, err := client.Collections.Create(ctx, linkwarden.CreateCollectionRequest{
+	Name:     "Go",
+	ParentID: parent.ID,
+})
+
+// Make it public and give user 3 read/write access.
+_, err = client.Collections.Update(ctx, child.ID, linkwarden.UpdateCollectionRequest{
+	IsPublic: true,
+	Members: []linkwarden.Member{
+		{UserID: 3, CanCreate: true, CanUpdate: true},
+	},
+})
+```
+
+</details>
+
+<details>
+<summary><b>Manage tags</b></summary>
+
+```go
+tags, err := client.Tags.List(ctx, linkwarden.ListTagsOptions{Search: "go"})
+for _, t := range tags {
+	if t.Count != nil {
+		fmt.Printf("%-20s %d links\n", t.Name, t.Count.Links)
+	}
+}
+
+_, err = client.Tags.CreateOrUpdateBulk(ctx, []linkwarden.CreateOrUpdateTagInput{
+	{Label: "to-read"},
+	{Label: "reference"},
+})
+
+_, err = client.Tags.Update(ctx, 12, "golang") // rename
+err = client.Tags.BulkDelete(ctx, []int{13, 14})
+```
+
+</details>
+
+### Archives, highlights and RSS
+
+<details>
+<summary><b>Download an archived PDF</b></summary>
+
+```go
+pdf, err := client.Archives.Get(ctx, link.ID, linkwarden.ArchiveFormatPDF, false)
+if err != nil {
+	log.Fatal(err)
+}
+os.WriteFile("effective-go.pdf", pdf.Data, 0o644)
+```
+
+</details>
+
+<details>
+<summary><b>Upload your own archive file</b></summary>
+
+```go
+f, err := os.Open("snapshot.png")
+if err != nil {
+	log.Fatal(err)
+}
+defer f.Close()
+
+// Attach it to an existing link…
+_, err = client.Archives.Upload(ctx, link.ID, linkwarden.ArchiveFormatPNG, false, "snapshot.png", f)
+
+// …or create a new link from a file in one call.
+// _, err = client.Archives.UploadStandalone(ctx, linkwarden.ArchiveFormatPDF, false,
+// 	"https://example.com/paper", "paper.pdf", pdfReader)
+```
+
+</details>
+
+<details>
+<summary><b>Highlights</b></summary>
+
+```go
+h, err := client.Highlights.Create(ctx, linkwarden.CreateHighlightRequest{
+	LinkID:      link.ID,
+	Color:       "yellow",
+	Text:        "Don't communicate by sharing memory",
+	Comment:     "the classic",
+	StartOffset: 120,
+	EndOffset:   155,
+})
+
+highlights, err := client.Links.Highlights(ctx, link.ID)
+
+err = client.Highlights.Delete(ctx, h.ID)
+```
+
+</details>
+
+<details>
+<summary><b>Subscribe to an RSS feed</b></summary>
+
+New feed items are saved into the collection automatically.
+
+```go
+feed, err := client.RSS.Create(ctx, linkwarden.CreateRSSRequest{
+	Name:           "Go Blog",
+	URL:            "https://go.dev/blog/feed.atom",
+	CollectionName: "Go",
+})
+
+feeds, err := client.RSS.List(ctx)
+err = client.RSS.Delete(ctx, feed.ID)
+```
+
+</details>
+
+### Import, export and account
+
+<details>
+<summary><b>Back up everything</b></summary>
+
+```go
+data, err := client.Migrations.Export(ctx)
+if err != nil {
+	log.Fatal(err)
+}
+os.WriteFile("backup.json", data, 0o600)
+```
+
+</details>
+
+<details>
+<summary><b>Import browser bookmarks</b></summary>
+
+```go
+html, err := os.ReadFile("bookmarks.html") // exported from Chrome, Firefox, Safari…
+if err != nil {
+	log.Fatal(err)
+}
+
+msg, err := client.Migrations.Import(ctx, linkwarden.ImportFormatBookmarksHTML, string(html))
+fmt.Println(msg) // the import runs in the background on the server
+```
+
+Other formats: `ImportFormatLinkwardenJSON`, `ImportFormatWallabagJSON`,
+`ImportFormatOmnivoreJSON`, `ImportFormatPocketJSON`.
+
+</details>
+
+<details>
+<summary><b>API tokens</b></summary>
+
+```go
+created, err := client.Tokens.Create(ctx, "ci-bot", 0)
+if err != nil {
+	log.Fatal(err)
+}
+fmt.Println(created.SecretKey) // only returned once — store it now
+
+tokens, err := client.Tokens.List(ctx)
+err = client.Tokens.Revoke(ctx, created.Token.ID)
+```
+
+</details>
+
+<details>
+<summary><b>Instance config and favicons</b></summary>
+
+```go
+cfg, err := client.Config.Get(ctx)
+if err == nil && cfg.InstanceVersion != nil {
+	fmt.Println("Linkwarden", *cfg.InstanceVersion)
+}
+
+icon, err := client.Favicon.Get(ctx, "https://go.dev")
+os.WriteFile("go.ico", icon.Data, 0o644)
+```
+
+</details>
+
+### Client behaviour
+
+<details>
+<summary><b>Timeouts, cancellation and logging</b></summary>
+
+```go
+client := linkwarden.New(baseURL, token,
+	linkwarden.WithHTTPClient(&http.Client{Timeout: 30 * time.Second}),
+	linkwarden.WithLogger(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}))),
+)
+
+// Every call takes a context, so per-request deadlines work too.
+ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+defer cancel()
+links, err := client.Links.List(ctx, linkwarden.ListLinksOptions{})
+```
+
+</details>
+
+<details>
+<summary><b>Handle API errors</b></summary>
+
+```go
+_, err := client.Links.Get(ctx, 999999)
+switch {
+case linkwarden.IsNotFound(err):
+	fmt.Println("no such link")
+case linkwarden.IsConflict(err):
+	fmt.Println("already exists")
+case err != nil:
+	var apiErr *linkwarden.APIError
+	if errors.As(err, &apiErr) {
+		fmt.Println(apiErr.StatusCode, apiErr.Message)
+	}
+}
+```
+
+</details>
 
 ## Development
 

@@ -35,6 +35,8 @@ type WorkerService struct {
 	c *Client
 }
 
+// Stats returns the background worker's queue counts: how many links are pending,
+// done or failed for each kind of job.
 func (s *WorkerService) Stats(ctx context.Context) (*WorkerStats, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,

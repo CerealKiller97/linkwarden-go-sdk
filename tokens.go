@@ -23,6 +23,8 @@ type CreatedToken struct {
 	Token     TokenDetail `json:"token"`
 }
 
+// TokenDetail is the stored record of an API token, returned inside CreatedToken.
+// Use CreatedToken.SecretKey, not Token, to authenticate.
 type TokenDetail struct {
 	ID         int        `json:"id"`
 	Name       string     `json:"name"`
@@ -41,6 +43,8 @@ type TokensService struct {
 	c *Client
 }
 
+// List returns the authenticated user's API tokens. The token secrets are not
+// included; they are only shown once, by Create.
 func (s *TokensService) List(ctx context.Context) ([]Token, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -75,6 +79,8 @@ func (s *TokensService) Create(ctx context.Context, name string, expires int) (*
 	return &created, nil
 }
 
+// Revoke revokes the API token with the given ID. Requests made with it fail from
+// then on.
 func (s *TokensService) Revoke(ctx context.Context, id int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method: http.MethodDelete,

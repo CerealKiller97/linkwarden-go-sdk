@@ -34,6 +34,8 @@ type ArchivesService struct {
 	c *Client
 }
 
+// Get downloads a link's archived file in the given format. If preview is true it
+// returns the preview image instead. The whole file is read into memory.
 func (s *ArchivesService) Get(ctx context.Context, linkID int, format ArchiveFormat, preview bool) (*ArchiveFile, error) {
 	q := url.Values{}
 	q.Set("format", strconv.Itoa(int(format)))

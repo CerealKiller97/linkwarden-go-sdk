@@ -24,6 +24,7 @@ type HighlightsService struct {
 	c *Client
 }
 
+// Create adds a highlight to a link.
 func (s *HighlightsService) Create(ctx context.Context, req CreateHighlightRequest) (*Highlight, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPost,
@@ -42,6 +43,7 @@ func (s *HighlightsService) Create(ctx context.Context, req CreateHighlightReque
 	return &highlight, nil
 }
 
+// Delete deletes the highlight with the given ID.
 func (s *HighlightsService) Delete(ctx context.Context, id int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method: http.MethodDelete,

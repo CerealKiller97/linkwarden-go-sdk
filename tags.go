@@ -18,6 +18,8 @@ type TagInfo struct {
 	Count     *TagCount `json:"_count,omitempty"`
 }
 
+// TagCount holds the counts the API attaches to a TagInfo. Links is the number of
+// links with the tag.
 type TagCount struct {
 	Links int `json:"links"`
 }
@@ -62,6 +64,8 @@ type TagsService struct {
 	c *Client
 }
 
+// List returns one page of the authenticated user's tags, with link counts, filtered
+// by opts.
 func (s *TagsService) List(ctx context.Context, opts ListTagsOptions) ([]TagInfo, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -80,6 +84,7 @@ func (s *TagsService) List(ctx context.Context, opts ListTagsOptions) ([]TagInfo
 	return data.Tags, nil
 }
 
+// Get returns the tag with the given ID.
 func (s *TagsService) Get(ctx context.Context, id int) (*TagInfo, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -97,6 +102,8 @@ func (s *TagsService) Get(ctx context.Context, id int) (*TagInfo, error) {
 	return &tag, nil
 }
 
+// CreateOrUpdateBulk creates or updates the given tags, with their archive
+// settings, and returns them.
 func (s *TagsService) CreateOrUpdateBulk(ctx context.Context, tags []CreateOrUpdateTagInput) ([]TagInfo, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPost,
@@ -110,6 +117,7 @@ func (s *TagsService) CreateOrUpdateBulk(ctx context.Context, tags []CreateOrUpd
 	return decodeResponseEnvelope[[]TagInfo](body)
 }
 
+// Update renames the tag with the given ID.
 func (s *TagsService) Update(ctx context.Context, id int, name string) (*TagInfo, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPut,
@@ -128,6 +136,8 @@ func (s *TagsService) Update(ctx context.Context, id int, name string) (*TagInfo
 	return &tag, nil
 }
 
+// Delete deletes the tag with the given ID and removes it from its links. The links
+// themselves are kept.
 func (s *TagsService) Delete(ctx context.Context, id int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method: http.MethodDelete,
@@ -137,6 +147,7 @@ func (s *TagsService) Delete(ctx context.Context, id int) error {
 	return err
 }
 
+// BulkDelete deletes the tags with the given IDs and removes them from their links.
 func (s *TagsService) BulkDelete(ctx context.Context, ids []int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodDelete,

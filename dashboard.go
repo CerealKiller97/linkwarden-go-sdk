@@ -44,6 +44,8 @@ func (s *DashboardService) GetV1(ctx context.Context) ([]Link, error) {
 	return decodeResponseEnvelope[[]Link](body)
 }
 
+// GetV2 returns the v2 dashboard: the user's section layout and the data each
+// section shows.
 func (s *DashboardService) GetV2(ctx context.Context) (*DashboardV2Data, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -61,6 +63,8 @@ func (s *DashboardService) GetV2(ctx context.Context) (*DashboardV2Data, error) 
 	return &data, nil
 }
 
+// UpdateV2Layout replaces the dashboard's section layout and returns the updated
+// dashboard.
 func (s *DashboardService) UpdateV2Layout(ctx context.Context, layout []DashboardLayoutItem) (*DashboardV2Data, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPut,

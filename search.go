@@ -38,6 +38,8 @@ type SearchService struct {
 	c *Client
 }
 
+// Links returns one page of links matching opts.SearchQueryString. It returns nil
+// when nothing matches.
 func (s *SearchService) Links(ctx context.Context, opts SearchOptions) ([]Link, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,

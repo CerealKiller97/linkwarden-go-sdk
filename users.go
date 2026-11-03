@@ -89,6 +89,7 @@ type UsersService struct {
 	c *Client
 }
 
+// List returns the users on the instance that the authenticated user can see.
 func (s *UsersService) List(ctx context.Context) ([]User, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -197,6 +198,9 @@ func (s *UsersService) Delete(ctx context.Context, id int) error {
 	return err
 }
 
+// UpdatePreferences changes the reading and theme preferences of the user with the
+// given ID and returns the result. Empty fields in prefs are left unchanged, and
+// prefs.ID is ignored.
 func (s *UsersService) UpdatePreferences(ctx context.Context, id int, prefs UserPreferences) (*UserPreferences, error) {
 	prefs.ID = 0
 

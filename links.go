@@ -100,6 +100,8 @@ type BulkUpdateLinksRequest struct {
 	NewData            BulkUpdateLinksNewData `json:"newData,omitzero"`
 }
 
+// BulkUpdateLinksNewData holds the changes LinksService.BulkUpdate applies to each
+// link. Leave CollectionID at 0 to keep the links in their current collections.
 type BulkUpdateLinksNewData struct {
 	CollectionID int   `json:"collectionId,omitempty"`
 	Tags         []Tag `json:"tags,omitempty"`
@@ -124,6 +126,8 @@ type LinksService struct {
 	c *Client
 }
 
+// List returns one page of links matching opts. To get the next page, set
+// opts.Cursor to the ID of the last link returned.
 func (s *LinksService) List(ctx context.Context, opts ListLinksOptions) ([]Link, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -137,6 +141,7 @@ func (s *LinksService) List(ctx context.Context, opts ListLinksOptions) ([]Link,
 	return decodeResponseEnvelope[[]Link](body)
 }
 
+// Get returns the link with the given ID.
 func (s *LinksService) Get(ctx context.Context, id int) (*Link, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -154,6 +159,8 @@ func (s *LinksService) Get(ctx context.Context, id int) (*Link, error) {
 	return &link, nil
 }
 
+// Create saves a new link. Set req.Collection.ID to choose its collection; tags
+// are matched by name and created if they don't exist yet.
 func (s *LinksService) Create(ctx context.Context, req CreateLinkRequest) (*Link, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPost,
@@ -262,6 +269,7 @@ func (s *LinksService) mergeUpdate(ctx context.Context, current *Link, req Updat
 	return p, nil
 }
 
+// Delete deletes the link with the given ID.
 func (s *LinksService) Delete(ctx context.Context, id int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method: http.MethodDelete,
@@ -271,6 +279,9 @@ func (s *LinksService) Delete(ctx context.Context, id int) error {
 	return err
 }
 
+// BulkUpdate applies req.NewData to every link in req.Links: it can move them to
+// another collection and add tags. Set req.RemovePreviousTags to replace the links'
+// tags instead of adding to them.
 func (s *LinksService) BulkUpdate(ctx context.Context, req BulkUpdateLinksRequest) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPut,
@@ -281,6 +292,7 @@ func (s *LinksService) BulkUpdate(ctx context.Context, req BulkUpdateLinksReques
 	return err
 }
 
+// BulkDelete deletes the links with the given IDs.
 func (s *LinksService) BulkDelete(ctx context.Context, ids []int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodDelete,
@@ -291,6 +303,8 @@ func (s *LinksService) BulkDelete(ctx context.Context, ids []int) error {
 	return err
 }
 
+// Archive asks the server to archive the link with the given ID again. It returns
+// once the request is accepted, not when the new archive is ready.
 func (s *LinksService) Archive(ctx context.Context, id int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method: http.MethodPut,
@@ -300,6 +314,8 @@ func (s *LinksService) Archive(ctx context.Context, id int) error {
 	return err
 }
 
+// DeleteArchive deletes the archived files of the links with the given IDs. The links
+// themselves are kept.
 func (s *LinksService) DeleteArchive(ctx context.Context, ids []int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodDelete,
@@ -310,6 +326,7 @@ func (s *LinksService) DeleteArchive(ctx context.Context, ids []int) error {
 	return err
 }
 
+// Highlights returns the highlights on the link with the given ID.
 func (s *LinksService) Highlights(ctx context.Context, linkID int) ([]Highlight, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,

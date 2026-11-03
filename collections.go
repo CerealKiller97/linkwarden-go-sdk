@@ -27,10 +27,14 @@ type Collection struct {
 	Members     []Member         `json:"members,omitempty"`
 }
 
+// CollectionCount holds the counts the API attaches to a Collection. Links is the
+// number of links in the collection.
 type CollectionCount struct {
 	Links int `json:"links"`
 }
 
+// CollectionRef identifies a collection by ID and name. It is used for
+// Collection.Parent, the collection a nested collection sits inside.
 type CollectionRef struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
@@ -78,6 +82,7 @@ type CollectionsService struct {
 	c *Client
 }
 
+// List returns every collection the authenticated user owns or is a member of.
 func (s *CollectionsService) List(ctx context.Context) ([]Collection, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -90,6 +95,9 @@ func (s *CollectionsService) List(ctx context.Context) ([]Collection, error) {
 	return decodeResponseEnvelope[[]Collection](body)
 }
 
+// Get returns the collection with the given ID. The API answers a missing or
+// inaccessible collection with 200 and a null body, so Get turns that into an
+// *APIError with status 404; check it with IsNotFound.
 func (s *CollectionsService) Get(ctx context.Context, id int) (*Collection, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -184,6 +192,7 @@ func (s *CollectionsService) Update(ctx context.Context, id int, req UpdateColle
 	return &collection, nil
 }
 
+// Delete deletes the collection with the given ID.
 func (s *CollectionsService) Delete(ctx context.Context, id int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method: http.MethodDelete,

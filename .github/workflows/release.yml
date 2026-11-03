@@ -1,0 +1,61 @@
+name: release
+
+# Publishes a GitHub release for a version tag, with its notes taken from CHANGELOG.md.
+# The tests run first, on the tagged commit, against the Linkwarden version pinned in
+# .linkwarden-version, so the "Tested against Linkwarden" line in the notes is true.
+
+on:
+  push:
+    tags: ["v*"]
+  # Run by hand to (re)publish the release for a tag that already exists.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to release, e.g. v1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      # Fails early if CHANGELOG.md has no entry for the tag, or names a different
+      # Linkwarden version than the one the tests use.
+      - name: 📝 Check changelog entry
+        run: scripts/release-notes.sh "${{ inputs.tag || github.ref_name }}"
+
+  test:
+    needs: notes
+    uses: ./.github/workflows/test.yml
+    with:
+      ref: ${{ inputs.tag || github.ref }}
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - name: 🚀 Publish GitHub release
+        run: |
+          scripts/release-notes.sh "$TAG" > "$RUNNER_TEMP/notes.md"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          fi

@@ -2,18 +2,17 @@ package linkwarden
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 )
 
 // DashboardV2Data is the payload returned by the v2 dashboard endpoints.
-// CollectionLinks is kept as raw JSON since its per-collection shape isn't part of
-// the published API schema.
+// CollectionLinks maps a collection ID (as a string key) to that collection's links,
+// for each collection section in the dashboard layout.
 type DashboardV2Data struct {
-	Links               []Link          `json:"links"`
-	CollectionLinks     json.RawMessage `json:"collectionLinks,omitempty"`
-	NumberOfPinnedLinks int             `json:"numberOfPinnedLinks"`
-	NumberOfTags        int             `json:"numberOfTags"`
+	Links               []Link            `json:"links"`
+	CollectionLinks     map[string][]Link `json:"collectionLinks,omitempty"`
+	NumberOfPinnedLinks int               `json:"numberOfPinnedLinks"`
+	NumberOfTags        int               `json:"numberOfTags"`
 }
 
 // DashboardLayoutItem configures one widget in the v2 dashboard layout, as sent to

@@ -100,3 +100,20 @@ func TestTagsService_BulkDelete(t *testing.T) {
 	_, err := client.Tags.Get(t.Context(), kept.ID)
 	assert.NoError(err)
 }
+
+func TestTagsService_CreateOrUpdateBulk_ArchiveSettings(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	label := uniqueName("tag")
+
+	tags, err := client.Tags.CreateOrUpdateBulk(t.Context(), []CreateOrUpdateTagInput{{
+		Label:               label,
+		ArchiveAsScreenshot: new(false),
+		ArchiveAsPDF:        new(true),
+	}})
+	assert.NoError(err)
+	assert.Len(tags, 1)
+	t.Cleanup(func() { _ = client.Tags.Delete(t.Context(), tags[0].ID) })
+	assert.Equal(label, tags[0].Name)
+}

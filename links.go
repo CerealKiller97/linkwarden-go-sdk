@@ -1,6 +1,7 @@
 package linkwarden
 
 import (
+	"cmp"
 	"context"
 	"net/http"
 	"net/url"
@@ -171,24 +172,94 @@ func (s *LinksService) Create(ctx context.Context, req CreateLinkRequest) (*Link
 	return &link, nil
 }
 
+// Update changes the fields set in req and keeps the rest. The API replaces the whole
+// link (it requires its collection and full tag list), so Update first fetches the link
+// and fills every unset field from it. Tags and PinnedBy, when set, replace the link's
+// current lists; a Collection with only an ID moves the link to that collection.
 func (s *LinksService) Update(ctx context.Context, id int, req UpdateLinkRequest) (*Link, error) {
-	req.ID = id
+	current, err := s.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := s.mergeUpdate(ctx, current, req)
+	if err != nil {
+		return nil, err
+	}
 
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPut,
 		path:     "/api/v1/links/" + strconv.Itoa(id),
-		jsonBody: req,
+		jsonBody: payload,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	var link Link
-	if err := decodeJSON(body, &link); err != nil {
+	link, err := decodeResponseEnvelope[Link](body)
+	if err != nil {
 		return nil, err
 	}
 
 	return &link, nil
+}
+
+// updateLinkPayload is the full link the update endpoint expects.
+type updateLinkPayload struct {
+	ID          int                  `json:"id"`
+	Name        string               `json:"name"`
+	URL         string               `json:"url"`
+	Description string               `json:"description"`
+	Icon        string               `json:"icon,omitempty"`
+	IconWeight  string               `json:"iconWeight,omitempty"`
+	Color       string               `json:"color,omitempty"`
+	Collection  updateLinkCollection `json:"collection"`
+	Tags        []Tag                `json:"tags"`
+	PinnedBy    []PinnedBy           `json:"pinnedBy,omitempty"`
+}
+
+type updateLinkCollection struct {
+	ID      int `json:"id"`
+	OwnerID int `json:"ownerId"`
+}
+
+func (s *LinksService) mergeUpdate(ctx context.Context, current *Link, req UpdateLinkRequest) (updateLinkPayload, error) {
+	p := updateLinkPayload{
+		ID:          current.ID,
+		Name:        cmp.Or(req.Name, current.Name),
+		URL:         cmp.Or(req.URL, current.URL),
+		Description: cmp.Or(req.Description, current.Description),
+		Icon:        cmp.Or(req.Icon, current.Icon),
+		IconWeight:  cmp.Or(req.IconWeight, current.IconWeight),
+		Color:       cmp.Or(req.Color, current.Color),
+		Collection:  updateLinkCollection{ID: current.Collection.ID, OwnerID: current.Collection.OwnerID},
+		Tags:        current.Tags,
+		PinnedBy:    current.PinnedBy,
+	}
+
+	if req.Tags != nil {
+		p.Tags = req.Tags
+	}
+	if p.Tags == nil {
+		p.Tags = []Tag{}
+	}
+	if req.PinnedBy != nil {
+		p.PinnedBy = req.PinnedBy
+	}
+
+	if id := req.Collection.ID; id != 0 && id != current.Collection.ID {
+		ownerID := req.Collection.OwnerID
+		if ownerID == 0 {
+			target, err := s.c.Collections.Get(ctx, id)
+			if err != nil {
+				return p, err
+			}
+			ownerID = target.OwnerID
+		}
+		p.Collection = updateLinkCollection{ID: id, OwnerID: ownerID}
+	}
+
+	return p, nil
 }
 
 func (s *LinksService) Delete(ctx context.Context, id int) error {

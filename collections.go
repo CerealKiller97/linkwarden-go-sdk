@@ -1,6 +1,7 @@
 package linkwarden
 
 import (
+	"cmp"
 	"context"
 	"net/http"
 	"strconv"
@@ -57,6 +58,19 @@ type UpdateCollectionRequest struct {
 	Members     []Member `json:"members,omitempty"`
 }
 
+// updateCollectionPayload is the full collection the update endpoint expects.
+type updateCollectionPayload struct {
+	ID          int      `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Color       string   `json:"color,omitempty"`
+	Icon        string   `json:"icon,omitempty"`
+	IconWeight  string   `json:"iconWeight,omitempty"`
+	ParentID    *int     `json:"parentId,omitempty"`
+	IsPublic    bool     `json:"isPublic"`
+	Members     []Member `json:"members"`
+}
+
 // CollectionsService accesses the /api/v1/collections endpoints.
 type CollectionsService struct {
 	c *Client
@@ -83,12 +97,17 @@ func (s *CollectionsService) Get(ctx context.Context, id int) (*Collection, erro
 		return nil, err
 	}
 
-	collection, err := decodeResponseEnvelope[Collection](body)
+	collection, err := decodeResponseEnvelope[*Collection](body)
 	if err != nil {
 		return nil, err
 	}
 
-	return &collection, nil
+	// A missing or inaccessible collection comes back as 200 {"response": null}.
+	if collection == nil {
+		return nil, newAPIError(http.StatusNotFound, []byte(`{"response":"Collection not found."}`))
+	}
+
+	return collection, nil
 }
 
 // Create creates a new collection. It posts to the un-suffixed /api/v1/collections
@@ -112,11 +131,41 @@ func (s *CollectionsService) Create(ctx context.Context, req CreateCollectionReq
 	return &collection, nil
 }
 
+// Update changes the fields set in req and keeps the rest. The API replaces the whole
+// collection (it requires its name and member list), so Update first fetches the
+// collection and fills every unset field from it. Members, when set, replace the
+// current members.
 func (s *CollectionsService) Update(ctx context.Context, id int, req UpdateCollectionRequest) (*Collection, error) {
+	current, err := s.Get(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := updateCollectionPayload{
+		ID:          id,
+		Name:        cmp.Or(req.Name, current.Name),
+		Description: cmp.Or(req.Description, current.Description),
+		Color:       cmp.Or(req.Color, current.Color),
+		Icon:        cmp.Or(req.Icon, current.Icon),
+		IconWeight:  cmp.Or(req.IconWeight, current.IconWeight),
+		ParentID:    current.ParentID,
+		IsPublic:    req.IsPublic || current.IsPublic,
+		Members:     current.Members,
+	}
+	if req.ParentID != 0 {
+		payload.ParentID = &req.ParentID
+	}
+	if req.Members != nil {
+		payload.Members = req.Members
+	}
+	if payload.Members == nil {
+		payload.Members = []Member{}
+	}
+
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPut,
 		path:     "/api/v1/collections/" + strconv.Itoa(id),
-		jsonBody: req,
+		jsonBody: payload,
 	})
 	if err != nil {
 		return nil, err

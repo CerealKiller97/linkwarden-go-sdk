@@ -23,7 +23,8 @@ type DashboardLayoutItem struct {
 	Type         string `json:"type"`
 	CollectionID *int   `json:"collectionId,omitempty"`
 	Enabled      bool   `json:"enabled"`
-	Order        int    `json:"order,omitempty"`
+	// Order is always sent: the API stores it as-is, and rejects a section without one.
+	Order int `json:"order"`
 }
 
 // DashboardService accesses the /api/v1/dashboard and /api/v2/dashboard endpoints.

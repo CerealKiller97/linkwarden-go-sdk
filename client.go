@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"mime"
 	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -165,7 +168,19 @@ func buildMultipartBody(fields map[string]string, fileField, filename string, r 
 		}
 	}
 
-	part, err := w.CreateFormFile(fileField, filename)
+	// The API rejects parts sent as application/octet-stream (CreateFormFile's default),
+	// so the part carries the type matching the file's extension.
+	// The API compares the bare media type, so parameters like "; charset=utf-8" are dropped.
+	contentType, _, err := mime.ParseMediaType(mime.TypeByExtension(filepath.Ext(filename)))
+	if err != nil {
+		contentType = "application/octet-stream"
+	}
+
+	header := make(textproto.MIMEHeader)
+	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, fileField, filename))
+	header.Set("Content-Type", contentType)
+
+	part, err := w.CreatePart(header)
 	if err != nil {
 		return nil, "", fmt.Errorf("create form file: %w", err)
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTagsService_CreateOrUpdateBulk(t *testing.T) {
+func TestTagsServiceCreateOrUpdateBulk(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -22,7 +22,7 @@ func TestTagsService_CreateOrUpdateBulk(t *testing.T) {
 	assert.ElementsMatch([]string{first, second}, []string{tags[0].Name, tags[1].Name})
 }
 
-func TestTagsService_List(t *testing.T) {
+func TestTagsServiceList(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -35,7 +35,7 @@ func TestTagsService_List(t *testing.T) {
 	assert.Equal(tag.Name, tags[0].Name)
 }
 
-func TestTagsService_Get(t *testing.T) {
+func TestTagsServiceGet(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -47,7 +47,7 @@ func TestTagsService_Get(t *testing.T) {
 	assert.Equal(tag.Name, got.Name)
 }
 
-func TestTagsService_Get_NotFound(t *testing.T) {
+func TestTagsServiceGetNotFound(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -57,7 +57,7 @@ func TestTagsService_Get_NotFound(t *testing.T) {
 	assert.True(IsNotFound(err))
 }
 
-func TestTagsService_Update(t *testing.T) {
+func TestTagsServiceUpdate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -73,7 +73,7 @@ func TestTagsService_Update(t *testing.T) {
 	assert.Equal(renamed, got.Name)
 }
 
-func TestTagsService_Delete(t *testing.T) {
+func TestTagsServiceDelete(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -85,7 +85,7 @@ func TestTagsService_Delete(t *testing.T) {
 	assert.True(IsNotFound(err))
 }
 
-func TestTagsService_BulkDelete(t *testing.T) {
+func TestTagsServiceBulkDelete(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -101,7 +101,7 @@ func TestTagsService_BulkDelete(t *testing.T) {
 	assert.NoError(err)
 }
 
-func TestTagsService_CreateOrUpdateBulk_ArchiveSettings(t *testing.T) {
+func TestTagsServiceCreateOrUpdateBulkArchiveSettings(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

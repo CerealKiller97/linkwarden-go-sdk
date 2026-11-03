@@ -10,19 +10,20 @@ const testFeedURL = "https://go.dev/blog/feed.atom"
 
 func createTestSubscription(t *testing.T, c *Client, collectionID int) *RSSSubscription {
 	t.Helper()
+	assert := require.New(t)
 
 	sub, err := c.RSS.Create(t.Context(), CreateRSSRequest{
 		Name:         uniqueName("feed"),
 		URL:          testFeedURL,
 		CollectionID: collectionID,
 	})
-	require.NoError(t, err)
+	assert.NoError(err)
 	t.Cleanup(func() { _ = c.RSS.Delete(t.Context(), sub.ID) })
 
 	return sub
 }
 
-func TestRSSService_Create(t *testing.T) {
+func TestRSSServiceCreate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -34,7 +35,7 @@ func TestRSSService_Create(t *testing.T) {
 	assert.Equal(collection.ID, sub.CollectionID)
 }
 
-func TestRSSService_List(t *testing.T) {
+func TestRSSServiceList(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -51,7 +52,7 @@ func TestRSSService_List(t *testing.T) {
 	assert.Contains(ids, sub.ID)
 }
 
-func TestRSSService_Delete(t *testing.T) {
+func TestRSSServiceDelete(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -67,7 +68,7 @@ func TestRSSService_Delete(t *testing.T) {
 	}
 }
 
-func TestRSSService_Delete_NotFound(t *testing.T) {
+func TestRSSServiceDeleteNotFound(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

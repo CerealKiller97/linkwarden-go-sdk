@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNew_TrimsTrailingSlash(t *testing.T) {
+func TestNewTrimsTrailingSlash(t *testing.T) {
 	assert := require.New(t)
 
 	c := New("https://example.com/", "tok")
 	assert.Equal("https://example.com", c.baseURL)
 }
 
-func TestRequest_AuthenticatesWithToken(t *testing.T) {
+func TestRequestAuthenticatesWithToken(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -24,7 +24,7 @@ func TestRequest_AuthenticatesWithToken(t *testing.T) {
 	assert.NoError(err)
 }
 
-func TestRequest_InvalidTokenReturnsAPIError(t *testing.T) {
+func TestRequestInvalidTokenReturnsAPIError(t *testing.T) {
 	assert := require.New(t)
 
 	newTestClient(t)
@@ -40,7 +40,7 @@ func TestRequest_InvalidTokenReturnsAPIError(t *testing.T) {
 	assert.NotEmpty(apiErr.RawBody)
 }
 
-func TestNewAPIError_ReadsMessageField(t *testing.T) {
+func TestNewAPIErrorReadsMessageField(t *testing.T) {
 	assert := require.New(t)
 
 	err := newAPIError(http.StatusBadRequest, []byte(`{"message":"Bad input."}`))
@@ -48,7 +48,7 @@ func TestNewAPIError_ReadsMessageField(t *testing.T) {
 	assert.Equal("linkwarden: 400 Bad input.", err.Error())
 }
 
-func TestNewAPIError_ReadsResponseField(t *testing.T) {
+func TestNewAPIErrorReadsResponseField(t *testing.T) {
 	assert := require.New(t)
 
 	err := newAPIError(http.StatusNotFound, []byte(`{"response":"Tag not found."}`))
@@ -57,7 +57,7 @@ func TestNewAPIError_ReadsResponseField(t *testing.T) {
 	assert.False(IsConflict(err))
 }
 
-func TestNewAPIError_FallsBackToStatusText(t *testing.T) {
+func TestNewAPIErrorFallsBackToStatusText(t *testing.T) {
 	assert := require.New(t)
 
 	err := newAPIError(http.StatusInternalServerError, []byte(`Internal Server Error`))
@@ -98,7 +98,9 @@ func TestFileContentType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, fileContentType(tt.filename, tt.head))
+			assert := require.New(t)
+
+			assert.Equal(tt.want, fileContentType(tt.filename, tt.head))
 		})
 	}
 }

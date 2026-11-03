@@ -17,7 +17,7 @@ func newAnonymousClient(t *testing.T) *Client {
 	return New(os.Getenv("LINKWARDEN_URL"), "")
 }
 
-func TestSessionService_Create(t *testing.T) {
+func TestSessionServiceCreate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -37,7 +37,7 @@ func TestSessionService_Create(t *testing.T) {
 	assert.Equal(user.ID, me.ID)
 }
 
-func TestSessionService_Create_WrongPassword(t *testing.T) {
+func TestSessionServiceCreateWrongPassword(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -53,7 +53,7 @@ func TestSessionService_Create_WrongPassword(t *testing.T) {
 	assert.ErrorAs(err, &apiErr)
 }
 
-func TestAuthService_InvalidInput(t *testing.T) {
+func TestAuthServiceInvalidInput(t *testing.T) {
 	client := newAnonymousClient(t)
 
 	// The test instance has no email provider and no reset tokens, so each call is
@@ -85,7 +85,7 @@ func TestAuthService_InvalidInput(t *testing.T) {
 	}
 }
 
-func TestLoginsService_Get(t *testing.T) {
+func TestLoginsServiceGet(t *testing.T) {
 	assert := require.New(t)
 
 	cfg, err := newAnonymousClient(t).Logins.Get(t.Context())

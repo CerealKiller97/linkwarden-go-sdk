@@ -8,6 +8,7 @@ import (
 
 func createTestHighlight(t *testing.T, c *Client, linkID int) *Highlight {
 	t.Helper()
+	assert := require.New(t)
 
 	highlight, err := c.Highlights.Create(t.Context(), CreateHighlightRequest{
 		Color:       "yellow",
@@ -17,13 +18,13 @@ func createTestHighlight(t *testing.T, c *Client, linkID int) *Highlight {
 		Text:        "Hello",
 		LinkID:      linkID,
 	})
-	require.NoError(t, err)
+	assert.NoError(err)
 	t.Cleanup(func() { _ = c.Highlights.Delete(t.Context(), highlight.ID) })
 
 	return highlight
 }
 
-func TestHighlightsService_Create(t *testing.T) {
+func TestHighlightsServiceCreate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -39,7 +40,7 @@ func TestHighlightsService_Create(t *testing.T) {
 	assert.Equal(5, highlight.EndOffset)
 }
 
-func TestHighlightsService_Delete(t *testing.T) {
+func TestHighlightsServiceDelete(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

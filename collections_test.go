@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCollectionsService_Create(t *testing.T) {
+func TestCollectionsServiceCreate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -26,7 +26,7 @@ func TestCollectionsService_Create(t *testing.T) {
 	assert.Equal("#f59e0b", collection.Color)
 }
 
-func TestCollectionsService_Create_WithParent(t *testing.T) {
+func TestCollectionsServiceCreateWithParent(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -43,7 +43,7 @@ func TestCollectionsService_Create_WithParent(t *testing.T) {
 	assert.Equal(parent.ID, *child.ParentID)
 }
 
-func TestCollectionsService_List(t *testing.T) {
+func TestCollectionsServiceList(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -62,7 +62,7 @@ func TestCollectionsService_List(t *testing.T) {
 	assert.Equal(collection.Name, found.Name)
 }
 
-func TestCollectionsService_Get(t *testing.T) {
+func TestCollectionsServiceGet(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -74,7 +74,7 @@ func TestCollectionsService_Get(t *testing.T) {
 	assert.Equal(collection.Name, got.Name)
 }
 
-func TestCollectionsService_Get_NotFound(t *testing.T) {
+func TestCollectionsServiceGetNotFound(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -83,7 +83,7 @@ func TestCollectionsService_Get_NotFound(t *testing.T) {
 	assert.True(IsNotFound(err))
 }
 
-func TestCollectionsService_Update(t *testing.T) {
+func TestCollectionsServiceUpdate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -105,7 +105,7 @@ func TestCollectionsService_Update(t *testing.T) {
 	assert.Equal("#10b981", got.Color)
 }
 
-func TestCollectionsService_Update_KeepsUnsetFields(t *testing.T) {
+func TestCollectionsServiceUpdateKeepsUnsetFields(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -127,7 +127,7 @@ func TestCollectionsService_Update_KeepsUnsetFields(t *testing.T) {
 	assert.Equal("#10b981", got.Color)
 }
 
-func TestCollectionsService_Update_IsPublic(t *testing.T) {
+func TestCollectionsServiceUpdateIsPublic(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -154,7 +154,7 @@ func TestCollectionsService_Update_IsPublic(t *testing.T) {
 	assert.False(got.IsPublic)
 }
 
-func TestCollectionsService_Delete(t *testing.T) {
+func TestCollectionsServiceDelete(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -170,7 +170,7 @@ func TestCollectionsService_Delete(t *testing.T) {
 	}
 }
 
-func TestCollectionsService_Delete_Inaccessible(t *testing.T) {
+func TestCollectionsServiceDeleteInaccessible(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

@@ -10,7 +10,7 @@ import (
 // The test instance has no USER_CONTENT_DOMAIN, so the preserved endpoints can only be
 // checked for the error they return; the happy path needs a separately hosted domain.
 
-func TestPreservedService_Token_NoUserContentDomain(t *testing.T) {
+func TestPreservedServiceTokenNoUserContentDomain(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -24,7 +24,7 @@ func TestPreservedService_Token_NoUserContentDomain(t *testing.T) {
 	assert.Equal(http.StatusBadRequest, apiErr.StatusCode)
 }
 
-func TestAvatarService_Get_NoImage(t *testing.T) {
+func TestAvatarServiceGetNoImage(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

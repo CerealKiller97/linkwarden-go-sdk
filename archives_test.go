@@ -13,6 +13,7 @@ import (
 // testPNG returns a small, valid PNG image to upload as an archive.
 func testPNG(t *testing.T) []byte {
 	t.Helper()
+	assert := require.New(t)
 
 	img := image.NewRGBA(image.Rect(0, 0, 4, 4))
 	for x := range 4 {
@@ -22,12 +23,12 @@ func testPNG(t *testing.T) []byte {
 	}
 
 	var buf bytes.Buffer
-	require.NoError(t, png.Encode(&buf, img))
+	assert.NoError(png.Encode(&buf, img))
 
 	return buf.Bytes()
 }
 
-func TestArchivesService_UploadAndGet(t *testing.T) {
+func TestArchivesServiceUploadAndGet(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -46,7 +47,7 @@ func TestArchivesService_UploadAndGet(t *testing.T) {
 	assert.Equal(data, file.Data)
 }
 
-func TestArchivesService_Get_Inaccessible(t *testing.T) {
+func TestArchivesServiceGetInaccessible(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -58,7 +59,7 @@ func TestArchivesService_Get_Inaccessible(t *testing.T) {
 	assert.ErrorAs(err, &apiErr)
 }
 
-func TestArchivesService_UploadStandalone(t *testing.T) {
+func TestArchivesServiceUploadStandalone(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -74,7 +75,7 @@ func TestArchivesService_UploadStandalone(t *testing.T) {
 
 // A file without a recognisable extension is uploaded with its sniffed type, since the
 // API rejects application/octet-stream parts.
-func TestArchivesService_Upload_SniffsContentType(t *testing.T) {
+func TestArchivesServiceUploadSniffsContentType(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

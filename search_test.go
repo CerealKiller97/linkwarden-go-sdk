@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSearchService_Links(t *testing.T) {
+func TestSearchServiceLinks(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -39,7 +39,7 @@ func TestSearchService_Links(t *testing.T) {
 	assert.Equal([]int{link.ID}, linkIDs(found))
 }
 
-func TestSearchService_Links_NoMatches(t *testing.T) {
+func TestSearchServiceLinksNoMatches(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

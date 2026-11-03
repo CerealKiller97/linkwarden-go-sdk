@@ -11,6 +11,7 @@ import (
 // password. The calling client must be the instance admin to delete it afterwards.
 func createTestUser(t *testing.T, c *Client) (*User, string) {
 	t.Helper()
+	assert := require.New(t)
 
 	password := uniqueName("password")
 	user, err := c.Users.Create(t.Context(), CreateUserRequest{
@@ -18,13 +19,13 @@ func createTestUser(t *testing.T, c *Client) (*User, string) {
 		Username: uniqueName("user"),
 		Password: password,
 	})
-	require.NoError(t, err)
+	assert.NoError(err)
 	t.Cleanup(func() { _ = c.Users.Delete(t.Context(), user.ID) })
 
 	return user, password
 }
 
-func TestUsersService_Me(t *testing.T) {
+func TestUsersServiceMe(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -35,7 +36,7 @@ func TestUsersService_Me(t *testing.T) {
 	assert.NotEmpty(me.Username)
 }
 
-func TestUsersService_Get(t *testing.T) {
+func TestUsersServiceGet(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -48,7 +49,7 @@ func TestUsersService_Get(t *testing.T) {
 	assert.Equal(me.Username, got.Username)
 }
 
-func TestUsersService_CreateListDelete(t *testing.T) {
+func TestUsersServiceCreateListDelete(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -73,7 +74,7 @@ func TestUsersService_CreateListDelete(t *testing.T) {
 	}
 }
 
-func TestUsersService_Update(t *testing.T) {
+func TestUsersServiceUpdate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -98,7 +99,7 @@ func TestUsersService_Update(t *testing.T) {
 	assert.True(got.PreventDuplicateLinks)
 }
 
-func TestUsersService_UpdatePreferences(t *testing.T) {
+func TestUsersServiceUpdatePreferences(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

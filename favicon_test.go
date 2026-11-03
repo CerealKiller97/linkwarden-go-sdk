@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestFaviconService_Get(t *testing.T) {
+func TestFaviconServiceGet(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

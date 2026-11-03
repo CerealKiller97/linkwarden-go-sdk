@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConfigService_Get(t *testing.T) {
+func TestConfigServiceGet(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

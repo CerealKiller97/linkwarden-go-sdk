@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLinksService_Create(t *testing.T) {
+func TestLinksServiceCreate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -33,7 +33,7 @@ func TestLinksService_Create(t *testing.T) {
 	assert.Equal(tagName, link.Tags[0].Name)
 }
 
-func TestLinksService_Get(t *testing.T) {
+func TestLinksServiceGet(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -47,7 +47,7 @@ func TestLinksService_Get(t *testing.T) {
 	assert.Equal(collection.ID, got.Collection.ID)
 }
 
-func TestLinksService_Get_Inaccessible(t *testing.T) {
+func TestLinksServiceGetInaccessible(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -60,7 +60,7 @@ func TestLinksService_Get_Inaccessible(t *testing.T) {
 	assert.NotEmpty(apiErr.Message)
 }
 
-func TestLinksService_List_FiltersByCollection(t *testing.T) {
+func TestLinksServiceListFiltersByCollection(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -75,7 +75,7 @@ func TestLinksService_List_FiltersByCollection(t *testing.T) {
 	assert.ElementsMatch([]int{first.ID, second.ID}, linkIDs(links))
 }
 
-func TestLinksService_List_FiltersByTag(t *testing.T) {
+func TestLinksServiceListFiltersByTag(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -97,7 +97,7 @@ func TestLinksService_List_FiltersByTag(t *testing.T) {
 	assert.Equal([]int{tagged.ID}, linkIDs(links))
 }
 
-func TestLinksService_Update(t *testing.T) {
+func TestLinksServiceUpdate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -117,7 +117,7 @@ func TestLinksService_Update(t *testing.T) {
 	assert.Equal("updated", got.Description)
 }
 
-func TestLinksService_Update_KeepsTagsAndCollection(t *testing.T) {
+func TestLinksServiceUpdateKeepsTagsAndCollection(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -144,7 +144,7 @@ func TestLinksService_Update_KeepsTagsAndCollection(t *testing.T) {
 	assert.Equal(tag.Name, got.Tags[0].Name)
 }
 
-func TestLinksService_Update_MovesToCollection(t *testing.T) {
+func TestLinksServiceUpdateMovesToCollection(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -160,7 +160,7 @@ func TestLinksService_Update_MovesToCollection(t *testing.T) {
 	assert.Equal(to.ID, got.Collection.ID)
 }
 
-func TestLinksService_Delete(t *testing.T) {
+func TestLinksServiceDelete(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -174,7 +174,7 @@ func TestLinksService_Delete(t *testing.T) {
 	assert.Empty(links)
 }
 
-func TestLinksService_BulkUpdate(t *testing.T) {
+func TestLinksServiceBulkUpdate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -203,7 +203,7 @@ func TestLinksService_BulkUpdate(t *testing.T) {
 	}
 }
 
-func TestLinksService_BulkDelete(t *testing.T) {
+func TestLinksServiceBulkDelete(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -219,7 +219,7 @@ func TestLinksService_BulkDelete(t *testing.T) {
 	assert.Equal([]int{kept.ID}, linkIDs(links))
 }
 
-func TestLinksService_Archive(t *testing.T) {
+func TestLinksServiceArchive(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -229,7 +229,7 @@ func TestLinksService_Archive(t *testing.T) {
 	assert.NoError(client.Links.Archive(t.Context(), link.ID))
 }
 
-func TestLinksService_DeleteArchive(t *testing.T) {
+func TestLinksServiceDeleteArchive(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -239,7 +239,7 @@ func TestLinksService_DeleteArchive(t *testing.T) {
 	assert.NoError(client.Links.DeleteArchive(t.Context(), []int{link.ID}))
 }
 
-func TestLinksService_Highlights(t *testing.T) {
+func TestLinksServiceHighlights(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

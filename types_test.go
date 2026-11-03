@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPinnedBy_UnmarshalJSON(t *testing.T) {
+func TestPinnedByUnmarshalJSON(t *testing.T) {
 	assert := require.New(t)
 
 	var link Link

@@ -9,7 +9,7 @@ import (
 
 // The test user is the instance's first user, which Linkwarden treats as the admin.
 
-func TestWorkerService_Stats(t *testing.T) {
+func TestWorkerServiceStats(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -20,7 +20,7 @@ func TestWorkerService_Stats(t *testing.T) {
 	assert.Positive(stats.Link.Pending + stats.Link.Done + stats.Link.Failed)
 }
 
-func TestWorkerService_ResetPreservation(t *testing.T) {
+func TestWorkerServiceResetPreservation(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -30,7 +30,7 @@ func TestWorkerService_ResetPreservation(t *testing.T) {
 	assert.NotEmpty(msg)
 }
 
-func TestWorkerService_Stats_NotAdmin(t *testing.T) {
+func TestWorkerServiceStatsNotAdmin(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

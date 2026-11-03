@@ -9,10 +9,11 @@ import (
 // createPublicTestCollection creates a public collection holding one tagged link.
 func createPublicTestCollection(t *testing.T, c *Client) (*Collection, *Link) {
 	t.Helper()
+	assert := require.New(t)
 
 	collection := createTestCollection(t, c)
 	_, err := c.Collections.Update(t.Context(), collection.ID, UpdateCollectionRequest{IsPublic: new(true)})
-	require.NoError(t, err)
+	assert.NoError(err)
 
 	link, err := c.Links.Create(t.Context(), CreateLinkRequest{
 		Name:       uniqueName("link"),
@@ -20,13 +21,13 @@ func createPublicTestCollection(t *testing.T, c *Client) (*Collection, *Link) {
 		Collection: Collection{ID: collection.ID},
 		Tags:       []Tag{{Name: uniqueName("tag")}},
 	})
-	require.NoError(t, err)
+	assert.NoError(err)
 	t.Cleanup(func() { _ = c.Links.Delete(t.Context(), link.ID) })
 
 	return collection, link
 }
 
-func TestPublicService_Collection(t *testing.T) {
+func TestPublicServiceCollection(t *testing.T) {
 	assert := require.New(t)
 
 	collection, _ := createPublicTestCollection(t, newTestClient(t))
@@ -37,7 +38,7 @@ func TestPublicService_Collection(t *testing.T) {
 	assert.Equal(collection.Name, got.Name)
 }
 
-func TestPublicService_Collection_Private(t *testing.T) {
+func TestPublicServiceCollectionPrivate(t *testing.T) {
 	assert := require.New(t)
 
 	collection := createTestCollection(t, newTestClient(t))
@@ -46,7 +47,7 @@ func TestPublicService_Collection_Private(t *testing.T) {
 	assert.Error(err)
 }
 
-func TestPublicService_CollectionLinks(t *testing.T) {
+func TestPublicServiceCollectionLinks(t *testing.T) {
 	assert := require.New(t)
 
 	collection, link := createPublicTestCollection(t, newTestClient(t))
@@ -56,7 +57,7 @@ func TestPublicService_CollectionLinks(t *testing.T) {
 	assert.Equal([]int{link.ID}, linkIDs(links))
 }
 
-func TestPublicService_CollectionTags(t *testing.T) {
+func TestPublicServiceCollectionTags(t *testing.T) {
 	assert := require.New(t)
 
 	collection, link := createPublicTestCollection(t, newTestClient(t))
@@ -71,7 +72,7 @@ func TestPublicService_CollectionTags(t *testing.T) {
 	assert.Contains(names, link.Tags[0].Name)
 }
 
-func TestPublicService_Link(t *testing.T) {
+func TestPublicServiceLink(t *testing.T) {
 	assert := require.New(t)
 
 	_, link := createPublicTestCollection(t, newTestClient(t))
@@ -82,7 +83,7 @@ func TestPublicService_Link(t *testing.T) {
 	assert.Equal(link.URL, got.URL)
 }
 
-func TestPublicService_User(t *testing.T) {
+func TestPublicServiceUser(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

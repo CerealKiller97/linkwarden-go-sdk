@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMigrationsService_Export(t *testing.T) {
+func TestMigrationsServiceExport(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -21,7 +21,7 @@ func TestMigrationsService_Export(t *testing.T) {
 	assert.Contains(string(data), link.URL)
 }
 
-func TestMigrationsService_Import(t *testing.T) {
+func TestMigrationsServiceImport(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDashboardService_GetV1(t *testing.T) {
+func TestDashboardServiceGetV1(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -19,7 +19,7 @@ func TestDashboardService_GetV1(t *testing.T) {
 	assert.Contains(linkIDs(links), link.ID)
 }
 
-func TestDashboardService_GetV2(t *testing.T) {
+func TestDashboardServiceGetV2(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -31,7 +31,7 @@ func TestDashboardService_GetV2(t *testing.T) {
 	assert.Contains(linkIDs(data.Links), link.ID)
 }
 
-func TestDashboardService_GetV2_CollectionLinks(t *testing.T) {
+func TestDashboardServiceGetV2CollectionLinks(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -55,7 +55,7 @@ func TestDashboardService_GetV2_CollectionLinks(t *testing.T) {
 	assert.Equal([]int{link.ID}, linkIDs(data.CollectionLinks[strconv.Itoa(collection.ID)]))
 }
 
-func TestDashboardService_UpdateV2Layout(t *testing.T) {
+func TestDashboardServiceUpdateV2Layout(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

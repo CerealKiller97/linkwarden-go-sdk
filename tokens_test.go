@@ -12,15 +12,16 @@ const tokenExpiresNever = 4
 
 func createTestToken(t *testing.T, c *Client) *CreatedToken {
 	t.Helper()
+	assert := require.New(t)
 
 	created, err := c.Tokens.Create(t.Context(), uniqueName("token"), tokenExpiresNever)
-	require.NoError(t, err)
+	assert.NoError(err)
 	t.Cleanup(func() { _ = c.Tokens.Revoke(t.Context(), created.Token.ID) })
 
 	return created
 }
 
-func TestTokensService_Create(t *testing.T) {
+func TestTokensServiceCreate(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -36,7 +37,7 @@ func TestTokensService_Create(t *testing.T) {
 	assert.NoError(err)
 }
 
-func TestTokensService_List(t *testing.T) {
+func TestTokensServiceList(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -52,7 +53,7 @@ func TestTokensService_List(t *testing.T) {
 	assert.Contains(names, created.Token.Name)
 }
 
-func TestTokensService_Revoke(t *testing.T) {
+func TestTokensServiceRevoke(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)
@@ -65,7 +66,7 @@ func TestTokensService_Revoke(t *testing.T) {
 	assert.Error(err)
 }
 
-func TestTokensService_Revoke_Unauthorized(t *testing.T) {
+func TestTokensServiceRevokeUnauthorized(t *testing.T) {
 	assert := require.New(t)
 
 	client := newTestClient(t)

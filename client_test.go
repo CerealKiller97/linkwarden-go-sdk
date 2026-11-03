@@ -79,3 +79,26 @@ func TestDecodeDataEnvelope(t *testing.T) {
 	assert.NoError(err)
 	assert.Equal("hello", got)
 }
+
+func TestFileContentType(t *testing.T) {
+	png := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
+
+	tests := []struct {
+		name     string
+		filename string
+		head     []byte
+		want     string
+	}{
+		{"from extension", "page.pdf", nil, "application/pdf"},
+		{"drops parameters", "page.html", nil, "text/html"},
+		{"sniffed without extension", "screenshot", png, "image/png"},
+		{"sniffed with unknown extension", "screenshot.unknown", png, "image/png"},
+		{"unrecognised content", "blob", []byte{0x00, 0x01, 0x02}, "application/octet-stream"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, fileContentType(tt.filename, tt.head))
+		})
+	}
+}

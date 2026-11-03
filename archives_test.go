@@ -71,3 +71,20 @@ func TestArchivesService_UploadStandalone(t *testing.T) {
 	assert.NotZero(link.ID)
 	assert.Equal(url, link.URL)
 }
+
+// A file without a recognisable extension is uploaded with its sniffed type, since the
+// API rejects application/octet-stream parts.
+func TestArchivesService_Upload_SniffsContentType(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	link := createTestLink(t, client, createTestCollection(t, client).ID)
+	data := testPNG(t)
+
+	_, err := client.Archives.Upload(t.Context(), link.ID, ArchiveFormatPNG, false, "screenshot", bytes.NewReader(data))
+	assert.NoError(err)
+
+	file, err := client.Archives.Get(t.Context(), link.ID, ArchiveFormatPNG, false)
+	assert.NoError(err)
+	assert.Equal(data, file.Data)
+}

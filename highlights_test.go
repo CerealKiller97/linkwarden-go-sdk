@@ -25,13 +25,25 @@ func createTestHighlight(t *testing.T, c *Client, linkID int) *Highlight {
 }
 
 func TestHighlightsServiceCreate(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	collection := createTestCollection(t, client)
 	link := createTestLink(t, client, collection.ID)
 
-	highlight := createTestHighlight(t, client, link.ID)
+	// Act
+	highlight, err := client.Highlights.Create(t.Context(), CreateHighlightRequest{
+		Color:       "yellow",
+		Comment:     "worth rereading",
+		StartOffset: 0,
+		EndOffset:   5,
+		Text:        "Hello",
+		LinkID:      link.ID,
+	})
+
+	// Assert
+	assert.NoError(err)
+	t.Cleanup(func() { _ = client.Highlights.Delete(t.Context(), highlight.ID) })
 	assert.NotZero(highlight.ID)
 	assert.Equal(link.ID, highlight.LinkID)
 	assert.Equal("yellow", highlight.Color)
@@ -41,15 +53,18 @@ func TestHighlightsServiceCreate(t *testing.T) {
 }
 
 func TestHighlightsServiceDelete(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	collection := createTestCollection(t, client)
 	link := createTestLink(t, client, collection.ID)
 	highlight := createTestHighlight(t, client, link.ID)
 
-	assert.NoError(client.Highlights.Delete(t.Context(), highlight.ID))
+	// Act
+	err := client.Highlights.Delete(t.Context(), highlight.ID)
 
+	// Assert
+	assert.NoError(err)
 	highlights, err := client.Links.Highlights(t.Context(), link.ID)
 	assert.NoError(err)
 	assert.Empty(highlights)

@@ -25,49 +25,98 @@ func createTestUser(t *testing.T, c *Client) (*User, string) {
 	return user, password
 }
 
-func TestUsersServiceMe(t *testing.T) {
+// signInAs returns a client authenticated as user, so a test can change that user's
+// account without touching the shared test account.
+func signInAs(t *testing.T, c *Client, user *User, password string) *Client {
+	t.Helper()
 	assert := require.New(t)
 
+	token, err := c.Session.Create(t.Context(), CreateSessionRequest{Username: user.Username, Password: password})
+	assert.NoError(err)
+
+	return New(os.Getenv("LINKWARDEN_URL"), token)
+}
+
+func TestUsersServiceMe(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
 	client := newTestClient(t)
 
+	// Act
 	me, err := client.Users.Me(t.Context())
+
+	// Assert
 	assert.NoError(err)
 	assert.NotZero(me.ID)
 	assert.NotEmpty(me.Username)
 }
 
 func TestUsersServiceGet(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	me, err := client.Users.Me(t.Context())
 	assert.NoError(err)
 
+	// Act
 	got, err := client.Users.Get(t.Context(), me.ID)
+
+	// Assert
 	assert.NoError(err)
 	assert.Equal(me.ID, got.ID)
 	assert.Equal(me.Username, got.Username)
 }
 
-func TestUsersServiceCreateListDelete(t *testing.T) {
+func TestUsersServiceCreate(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
+	client := newTestClient(t)
+	username := uniqueName("user")
 
+	// Act
+	user, err := client.Users.Create(t.Context(), CreateUserRequest{
+		Name:     "Test User",
+		Username: username,
+		Password: uniqueName("password"),
+	})
+
+	// Assert
+	assert.NoError(err)
+	t.Cleanup(func() { _ = client.Users.Delete(t.Context(), user.ID) })
+	assert.NotZero(user.ID)
+	assert.Equal(username, user.Username)
+}
+
+func TestUsersServiceList(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
 	client := newTestClient(t)
 	user, _ := createTestUser(t, client)
-	assert.NotZero(user.ID)
 
+	// Act
 	users, err := client.Users.List(t.Context())
-	assert.NoError(err)
 
+	// Assert
+	assert.NoError(err)
 	var ids []int
 	for _, u := range users {
 		ids = append(ids, u.ID)
 	}
 	assert.Contains(ids, user.ID)
+}
 
-	assert.NoError(client.Users.Delete(t.Context(), user.ID))
+func TestUsersServiceDelete(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
+	client := newTestClient(t)
+	user, _ := createTestUser(t, client)
 
-	users, err = client.Users.List(t.Context())
+	// Act
+	err := client.Users.Delete(t.Context(), user.ID)
+
+	// Assert
+	assert.NoError(err)
+	users, err := client.Users.List(t.Context())
 	assert.NoError(err)
 	for _, u := range users {
 		assert.NotEqual(user.ID, u.ID)
@@ -75,23 +124,21 @@ func TestUsersServiceCreateListDelete(t *testing.T) {
 }
 
 func TestUsersServiceUpdate(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	user, password := createTestUser(t, client)
+	asUser := signInAs(t, client, user, password)
 
-	// Sign in as the new user, so the update can't touch the shared test account.
-	token, err := client.Session.Create(t.Context(), CreateSessionRequest{Username: user.Username, Password: password})
-	assert.NoError(err)
-	asUser := New(os.Getenv("LINKWARDEN_URL"), token)
-
+	// Act
 	updated, err := asUser.Users.Update(t.Context(), user.ID, UpdateUserRequest{
 		Name:                  new("Renamed User"),
 		PreventDuplicateLinks: new(true),
 	})
+
+	// Assert
 	assert.NoError(err)
 	assert.Equal("Renamed User", *updated.Name)
-
 	got, err := asUser.Users.Me(t.Context())
 	assert.NoError(err)
 	assert.Equal("Renamed User", *got.Name)
@@ -100,19 +147,19 @@ func TestUsersServiceUpdate(t *testing.T) {
 }
 
 func TestUsersServiceUpdatePreferences(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	user, password := createTestUser(t, client)
+	asUser := signInAs(t, client, user, password)
 
-	token, err := client.Session.Create(t.Context(), CreateSessionRequest{Username: user.Username, Password: password})
-	assert.NoError(err)
-	asUser := New(os.Getenv("LINKWARDEN_URL"), token)
-
+	// Act
 	prefs, err := asUser.Users.UpdatePreferences(t.Context(), user.ID, UserPreferences{
 		Theme:            "light",
 		ReadableFontSize: "18px",
 	})
+
+	// Assert
 	assert.NoError(err)
 	assert.Equal("light", prefs.Theme)
 	assert.Equal("18px", prefs.ReadableFontSize)

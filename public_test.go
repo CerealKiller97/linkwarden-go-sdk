@@ -28,43 +28,58 @@ func createPublicTestCollection(t *testing.T, c *Client) (*Collection, *Link) {
 }
 
 func TestPublicServiceCollection(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	collection, _ := createPublicTestCollection(t, newTestClient(t))
+	anon := newAnonymousClient(t)
 
-	got, err := newAnonymousClient(t).Public.Collection(t.Context(), collection.ID)
+	// Act
+	got, err := anon.Public.Collection(t.Context(), collection.ID)
+
+	// Assert
 	assert.NoError(err)
 	assert.Equal(collection.ID, got.ID)
 	assert.Equal(collection.Name, got.Name)
 }
 
 func TestPublicServiceCollectionPrivate(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	collection := createTestCollection(t, newTestClient(t))
+	anon := newAnonymousClient(t)
 
-	_, err := newAnonymousClient(t).Public.Collection(t.Context(), collection.ID)
+	// Act
+	_, err := anon.Public.Collection(t.Context(), collection.ID)
+
+	// Assert
 	assert.Error(err)
 }
 
 func TestPublicServiceCollectionLinks(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	collection, link := createPublicTestCollection(t, newTestClient(t))
+	anon := newAnonymousClient(t)
 
-	links, err := newAnonymousClient(t).Public.CollectionLinks(t.Context(), collection.ID, ListPublicLinksOptions{})
+	// Act
+	links, err := anon.Public.CollectionLinks(t.Context(), collection.ID, ListPublicLinksOptions{})
+
+	// Assert
 	assert.NoError(err)
 	assert.Equal([]int{link.ID}, linkIDs(links))
 }
 
 func TestPublicServiceCollectionTags(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	collection, link := createPublicTestCollection(t, newTestClient(t))
+	anon := newAnonymousClient(t)
 
-	tags, err := newAnonymousClient(t).Public.CollectionTags(t.Context(), collection.ID)
+	// Act
+	tags, err := anon.Public.CollectionTags(t.Context(), collection.ID)
+
+	// Assert
 	assert.NoError(err)
-
 	var names []string
 	for _, tag := range tags {
 		names = append(names, tag.Name)
@@ -73,24 +88,31 @@ func TestPublicServiceCollectionTags(t *testing.T) {
 }
 
 func TestPublicServiceLink(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	_, link := createPublicTestCollection(t, newTestClient(t))
+	anon := newAnonymousClient(t)
 
-	got, err := newAnonymousClient(t).Public.Link(t.Context(), link.ID)
+	// Act
+	got, err := anon.Public.Link(t.Context(), link.ID)
+
+	// Assert
 	assert.NoError(err)
 	assert.Equal(link.ID, got.ID)
 	assert.Equal(link.URL, got.URL)
 }
 
 func TestPublicServiceUser(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
-	client := newTestClient(t)
-	me, err := client.Users.Me(t.Context())
+	me, err := newTestClient(t).Users.Me(t.Context())
 	assert.NoError(err)
+	anon := newAnonymousClient(t)
 
-	got, err := newAnonymousClient(t).Public.User(t.Context(), me.ID)
+	// Act
+	got, err := anon.Public.User(t.Context(), me.ID)
+
+	// Assert
 	assert.NoError(err)
 	assert.Equal(me.ID, got.ID)
 	assert.Equal(me.Username, got.Username)

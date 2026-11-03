@@ -18,19 +18,21 @@ func newAnonymousClient(t *testing.T) *Client {
 }
 
 func TestSessionServiceCreate(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	user, password := createTestUser(t, client)
 
+	// Act
 	token, err := newAnonymousClient(t).Session.Create(t.Context(), CreateSessionRequest{
 		Username:    user.Username,
 		Password:    password,
 		SessionName: "sdk-test",
 	})
+
+	// Assert
 	assert.NoError(err)
 	assert.NotEmpty(token)
-
 	// The session token works as a bearer token.
 	me, err := New(os.Getenv("LINKWARDEN_URL"), token).Users.Me(t.Context())
 	assert.NoError(err)
@@ -38,17 +40,19 @@ func TestSessionServiceCreate(t *testing.T) {
 }
 
 func TestSessionServiceCreateWrongPassword(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	user, _ := createTestUser(t, client)
 
+	// Act
 	_, err := newAnonymousClient(t).Session.Create(t.Context(), CreateSessionRequest{
 		Username: user.Username,
 		Password: "wrong-password",
 	})
-	assert.Error(err)
 
+	// Assert
+	assert.Error(err)
 	var apiErr *APIError
 	assert.ErrorAs(err, &apiErr)
 }
@@ -72,11 +76,14 @@ func TestAuthServiceInvalidInput(t *testing.T) {
 
 	for name, call := range tests {
 		t.Run(name, func(t *testing.T) {
+			// Arrange
 			assert := require.New(t)
 
+			// Act
 			_, err := call()
-			assert.Error(err)
 
+			// Assert
+			assert.Error(err)
 			var apiErr *APIError
 			assert.ErrorAs(err, &apiErr)
 			assert.Equal(http.StatusBadRequest, apiErr.StatusCode)
@@ -86,9 +93,14 @@ func TestAuthServiceInvalidInput(t *testing.T) {
 }
 
 func TestLoginsServiceGet(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
+	client := newAnonymousClient(t)
 
-	cfg, err := newAnonymousClient(t).Logins.Get(t.Context())
+	// Act
+	cfg, err := client.Logins.Get(t.Context())
+
+	// Assert
 	assert.NoError(err)
 	assert.NotNil(cfg.CredentialsEnabled)
 	assert.Equal("true", *cfg.CredentialsEnabled)

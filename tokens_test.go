@@ -22,30 +22,35 @@ func createTestToken(t *testing.T, c *Client) *CreatedToken {
 }
 
 func TestTokensServiceCreate(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
-	created := createTestToken(t, client)
 
+	// Act
+	created, err := client.Tokens.Create(t.Context(), uniqueName("token"), tokenExpiresNever)
+
+	// Assert
+	assert.NoError(err)
+	t.Cleanup(func() { _ = client.Tokens.Revoke(t.Context(), created.Token.ID) })
 	assert.NotEmpty(created.SecretKey)
 	assert.NotZero(created.Token.ID)
 	assert.False(created.Token.Revoked)
-
 	// The new secret works as a bearer token on its own.
-	other := New(os.Getenv("LINKWARDEN_URL"), created.SecretKey)
-	_, err := other.Collections.List(t.Context())
+	_, err = New(os.Getenv("LINKWARDEN_URL"), created.SecretKey).Collections.List(t.Context())
 	assert.NoError(err)
 }
 
 func TestTokensServiceList(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	created := createTestToken(t, client)
 
+	// Act
 	tokens, err := client.Tokens.List(t.Context())
-	assert.NoError(err)
 
+	// Assert
+	assert.NoError(err)
 	var names []string
 	for _, tok := range tokens {
 		names = append(names, tok.Name)
@@ -54,28 +59,32 @@ func TestTokensServiceList(t *testing.T) {
 }
 
 func TestTokensServiceRevoke(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	created := createTestToken(t, client)
 
-	assert.NoError(client.Tokens.Revoke(t.Context(), created.Token.ID))
+	// Act
+	err := client.Tokens.Revoke(t.Context(), created.Token.ID)
 
-	revoked := New(os.Getenv("LINKWARDEN_URL"), created.SecretKey)
-	_, err := revoked.Collections.List(t.Context())
+	// Assert
+	assert.NoError(err)
+	_, err = New(os.Getenv("LINKWARDEN_URL"), created.SecretKey).Collections.List(t.Context())
 	assert.Error(err)
 }
 
 func TestTokensServiceRevokeUnauthorized(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	created := createTestToken(t, client)
-
 	unauthorized := New(os.Getenv("LINKWARDEN_URL"), "invalid-token")
-	err := unauthorized.Tokens.Revoke(t.Context(), created.Token.ID)
-	assert.Error(err)
 
+	// Act
+	err := unauthorized.Tokens.Revoke(t.Context(), created.Token.ID)
+
+	// Assert
+	assert.Error(err)
 	var apiErr *APIError
 	assert.ErrorAs(err, &apiErr)
 	assert.Equal(401, apiErr.StatusCode)

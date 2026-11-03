@@ -1,6 +1,9 @@
 package linkwarden
 
 import (
+	"bytes"
+	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"testing"
@@ -17,6 +20,43 @@ func TestNewTrimsTrailingSlash(t *testing.T) {
 
 	// Assert
 	assert.Equal("https://example.com", c.baseURL)
+}
+
+func TestNewDiscardsLogsByDefault(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
+
+	// Act
+	c := New("https://example.com", "tok")
+
+	// Assert
+	assert.False(c.logger.Enabled(context.Background(), slog.LevelError))
+}
+
+func TestWithLoggerOverridesDefault(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
+	buf := &bytes.Buffer{}
+	logger := slog.New(slog.NewTextHandler(buf, nil))
+
+	// Act
+	c := New("https://example.com", "tok", WithLogger(logger))
+	c.logger.Error("boom")
+
+	// Assert
+	assert.Same(logger, c.logger)
+	assert.Contains(buf.String(), "boom")
+}
+
+func TestWithLoggerIgnoresNil(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
+
+	// Act
+	c := New("https://example.com", "tok", WithLogger(nil))
+
+	// Assert
+	assert.NotNil(c.logger)
 }
 
 func TestRequestAuthenticatesWithToken(t *testing.T) {

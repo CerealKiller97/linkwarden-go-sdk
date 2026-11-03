@@ -94,7 +94,7 @@ func main() {
 | `client.Preserved`   | Signed URLs for archives on the user content domain   |
 | `client.Worker`      | Preservation queue stats and resets (admin only)      |
 
-Options: `WithHTTPClient(*http.Client)` for timeouts, proxies or custom transports, and `WithLogger(*slog.Logger)` for internal diagnostics (defaults to a text handler on stdout; pass `slog.New(slog.DiscardHandler)` to silence it). The SDK depends only on the standard library.
+Options: `WithHTTPClient(*http.Client)` for timeouts, proxies or custom transports, and `WithLogger(*slog.Logger)` for internal diagnostics. The client is silent by default: it discards all log output unless you pass a logger. The SDK depends only on the standard library.
 
 ## Examples
 
@@ -407,6 +407,9 @@ client := linkwarden.New(baseURL, token,
 		Level: slog.LevelDebug,
 	}))),
 )
+
+// Logging is off by default. Pass your app's logger to opt in:
+//   linkwarden.WithLogger(slog.Default())
 
 // Every call takes a context, so per-request deadlines work too.
 ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

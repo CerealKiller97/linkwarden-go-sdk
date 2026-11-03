@@ -15,7 +15,6 @@ import (
 	"net/http"
 	"net/textproto"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -59,8 +58,10 @@ func WithHTTPClient(hc *http.Client) Option {
 	}
 }
 
-// WithLogger overrides the default (no-op) logger used for internal diagnostics.
-// A nil logger is ignored.
+// WithLogger sets the logger used for internal diagnostics, such as failing to
+// close a response body. By default the client discards all log output, so the
+// SDK never writes to the caller's stdout or stderr unless asked to. A nil
+// logger is ignored.
 func WithLogger(logger *slog.Logger) Option {
 	return func(c *Client) {
 		if logger != nil {
@@ -77,7 +78,7 @@ func New(baseURL, token string, opts ...Option) *Client {
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		token:      token,
 		httpClient: http.DefaultClient,
-		logger:     slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		logger:     slog.New(slog.DiscardHandler),
 	}
 
 	for _, opt := range opts {

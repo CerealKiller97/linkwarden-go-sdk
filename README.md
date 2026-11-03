@@ -87,6 +87,14 @@ func main() {
 | `client.Dashboard`   | v1/v2 dashboard data and layout                       |
 | `client.Config`      | Public instance configuration                         |
 | `client.Favicon`     | Favicon lookup for any URL                            |
+| `client.Users`       | Current user, registration, profile and preferences   |
+| `client.Session`     | Sign in with username and password for a token        |
+| `client.Auth`        | Password reset and email verification                 |
+| `client.Logins`      | Sign-in methods the instance offers                   |
+| `client.Public`      | Read-only access to public collections, links, users  |
+| `client.Avatar`      | User avatar images                                    |
+| `client.Preserved`   | Signed URLs for archives on the user content domain   |
+| `client.Worker`      | Preservation queue stats and resets (admin only)      |
 
 Options: `WithHTTPClient(*http.Client)` for timeouts, proxies or custom transports, and `WithLogger(*slog.Logger)` for internal diagnostics (defaults to a text handler on stdout; pass `slog.New(slog.DiscardHandler)` to silence it). The SDK depends only on the standard library.
 
@@ -183,7 +191,7 @@ child, err := client.Collections.Create(ctx, linkwarden.CreateCollectionRequest{
 
 // Make it public and give user 3 read/write access.
 _, err = client.Collections.Update(ctx, child.ID, linkwarden.UpdateCollectionRequest{
-	IsPublic: true,
+	IsPublic: new(true),
 	Members: []linkwarden.Member{
 		{UserID: 3, CanCreate: true, CanUpdate: true},
 	},
@@ -332,6 +340,44 @@ fmt.Println(created.SecretKey) // only returned once — store it now
 
 tokens, err := client.Tokens.List(ctx)
 err = client.Tokens.Revoke(ctx, created.Token.ID)
+```
+
+</details>
+
+<details>
+<summary><b>Sign in with a username and password</b></summary>
+
+`Session`, `Auth`, `Logins`, `Public` and `Config` work without a token.
+
+```go
+anon := linkwarden.New(baseURL, "")
+
+token, err := anon.Session.Create(ctx, linkwarden.CreateSessionRequest{
+	Username: "dev",
+	Password: os.Getenv("LINKWARDEN_PASSWORD"),
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+client := linkwarden.New(baseURL, token)
+me, err := client.Users.Me(ctx)
+```
+
+</details>
+
+<details>
+<summary><b>Read a public collection</b></summary>
+
+```go
+anon := linkwarden.New(baseURL, "")
+
+col, err := anon.Public.Collection(ctx, 7)
+links, err := anon.Public.CollectionLinks(ctx, col.ID, linkwarden.ListPublicLinksOptions{
+	SearchQueryString: "go",
+	SearchByName:      true,
+	SearchByTags:      true,
+})
 ```
 
 </details>

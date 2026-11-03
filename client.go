@@ -39,6 +39,14 @@ type Client struct {
 	Config      *ConfigService
 	Favicon     *FaviconService
 	Migrations  *MigrationsService
+	Preserved   *PreservedService
+	Avatar      *AvatarService
+	Logins      *LoginsService
+	Public      *PublicService
+	Session     *SessionService
+	Auth        *AuthService
+	Users       *UsersService
+	Worker      *WorkerService
 }
 
 // Option configures a Client.
@@ -62,7 +70,8 @@ func WithLogger(logger *slog.Logger) Option {
 }
 
 // New creates a Linkwarden API client for the given instance base URL, authenticated
-// with the given bearer token (an API token or session token).
+// with the given bearer token (an API token or session token). The token may be
+// empty for the unauthenticated endpoints (Session, Auth, Logins, Public, Config).
 func New(baseURL, token string, opts ...Option) *Client {
 	c := &Client{
 		baseURL:    strings.TrimRight(baseURL, "/"),
@@ -87,6 +96,14 @@ func New(baseURL, token string, opts ...Option) *Client {
 	c.Config = &ConfigService{c: c}
 	c.Favicon = &FaviconService{c: c}
 	c.Migrations = &MigrationsService{c: c}
+	c.Preserved = &PreservedService{c: c}
+	c.Avatar = &AvatarService{c: c}
+	c.Logins = &LoginsService{c: c}
+	c.Public = &PublicService{c: c}
+	c.Session = &SessionService{c: c}
+	c.Auth = &AuthService{c: c}
+	c.Users = &UsersService{c: c}
+	c.Worker = &WorkerService{c: c}
 
 	return c
 }
@@ -132,7 +149,9 @@ func (c *Client) request(ctx context.Context, opt requestOptions) (*http.Respons
 		req.Header.Set("Content-Type", contentType)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

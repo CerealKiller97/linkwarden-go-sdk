@@ -10,8 +10,6 @@ A typed Go client for the [Linkwarden](https://linkwarden.app) API. It covers li
 collections, tags, search, archives, migrations, RSS, highlights, tokens and more, and depends
 only on the standard library.
 
-It powers [linkwarden-cli](https://github.com/CerealKiller97/linkwarden-cli).
-
 ## Install
 
 Requires **Go 1.27+**.

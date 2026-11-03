@@ -12,7 +12,8 @@ only on the standard library.
 
 ## Install
 
-Requires **Go 1.27+**.
+Requires **Go 1.27+**. Each release is tested against a specific Linkwarden version, listed in
+[CHANGELOG.md](CHANGELOG.md).
 
 ```bash
 go get github.com/CerealKiller97/linkwarden-go-sdk
@@ -456,8 +457,29 @@ Without `LINKWARDEN_URL` and `LINKWARDEN_TOKEN` the tests are skipped locally, a
 
 CI runs tests, `golangci-lint`, `gosec` and `govulncheck` on pushes to `main` and on pull requests.
 
-Releases are plain SemVer git tags (`v0.1.0`, `v0.2.0`, …). The module stays on `v0.x` until the
-API is stable.
+### Releases
+
+Releases are SemVer git tags (`v1.0.0`, `v1.1.0`, …). Changes are listed in
+[CHANGELOG.md](CHANGELOG.md), and each release there names the Linkwarden version its tests
+passed against.
+
+That version is pinned in [`.linkwarden-version`](.linkwarden-version). CI and
+`scripts/dev-linkwarden.sh` both run it. To bump it, change the file and fix anything the
+tests catch.
+
+To cut a release:
+
+1. In `CHANGELOG.md`, which follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+   rename `[Unreleased]` to `## [x.y.z] - YYYY-MM-DD`, keep its
+   `🧪 Tested against Linkwarden: <version>` line, start a new empty `[Unreleased]`, and update
+   the compare links at the bottom. The comment at the top of the file lists the section
+   headings to use.
+2. Check the notes: `scripts/release-notes.sh vX.Y.Z`
+3. Merge that to `main`, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`
+
+The release workflow then checks the changelog entry, runs the tests on the tag against the
+pinned Linkwarden version, and publishes a GitHub release with that entry as its notes. It
+fails if the entry is missing or names a different Linkwarden version.
 
 ## License
 

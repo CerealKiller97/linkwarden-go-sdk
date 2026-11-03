@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets the release workflow run the tests on the exact tag it's releasing.
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref to test. Defaults to the ref that triggered the run.
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -12,11 +19,14 @@ jobs:
   # The tests run against a real, throwaway Linkwarden instance rather than mocked responses.
   test:
     runs-on: ubuntu-latest
-    env:
-      # Pinned so upstream releases can't break CI unannounced. Bump it deliberately.
-      LINKWARDEN_VERSION: v2.16.3
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+      # Pinned in .linkwarden-version so upstream releases can't break CI unannounced.
+      # Bump it deliberately; each CHANGELOG entry records the version it was tested on.
+      - name: 📌 Read pinned Linkwarden version
+        run: echo "LINKWARDEN_VERSION=$(tr -d '[:space:]' < .linkwarden-version)" >> "$GITHUB_ENV"
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod

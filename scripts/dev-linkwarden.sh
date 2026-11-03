@@ -12,7 +12,8 @@
 #   eval "$(scripts/dev-linkwarden.sh env)"
 #   go test ./...
 #
-# Overridable via environment: LINKWARDEN_PORT (3000), LINKWARDEN_VERSION (latest),
+# Overridable via environment: LINKWARDEN_PORT (3000), LINKWARDEN_VERSION (the version
+# pinned in .linkwarden-version, which CI also tests against),
 # DEV_USERNAME (dev), DEV_PASSWORD (devpassword).
 
 set -euo pipefail
@@ -26,6 +27,12 @@ PORT="${LINKWARDEN_PORT:-3000}"
 BASE_URL="http://localhost:$PORT"
 USERNAME="${DEV_USERNAME:-dev}"
 PASSWORD="${DEV_PASSWORD:-devpassword}"
+
+# Run the same Linkwarden version as CI unless the shell or .env picks another one.
+if [[ -z "${LINKWARDEN_VERSION:-}" ]] && ! grep -qs '^LINKWARDEN_VERSION=' "$SERVER_ENV"; then
+	LINKWARDEN_VERSION="$(tr -d '[:space:]' <"$ROOT_DIR/.linkwarden-version")"
+	export LINKWARDEN_VERSION
+fi
 
 compose() {
 	docker compose -f "$COMPOSE_FILE" "$@"

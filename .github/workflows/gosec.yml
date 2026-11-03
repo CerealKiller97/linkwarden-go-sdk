@@ -1,0 +1,19 @@
+name: gosec
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gosec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run gosec
+        uses: securego/gosec@57f161386e11e13e4c8a37255bc1a6502993d079 # v2.29.0 (image built with Go 1.27)
+        with:
+          args: ./...

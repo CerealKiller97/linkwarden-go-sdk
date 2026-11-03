@@ -12,6 +12,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -63,7 +64,7 @@ func New(baseURL, token string, opts ...Option) *Client {
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		token:      token,
 		httpClient: http.DefaultClient,
-		logger:     slog.New(slog.DiscardHandler),
+		logger:     slog.New(slog.NewTextHandler(os.Stdout, nil)),
 	}
 
 	for _, opt := range opts {

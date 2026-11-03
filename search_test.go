@@ -1,8 +1,9 @@
 package linkwarden
 
 import (
-	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -10,34 +11,40 @@ import (
 func TestSearchService_Links(t *testing.T) {
 	assert := require.New(t)
 
-	var gotQuery string
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodGet, r.Method)
-		assert.Equal("/api/v1/search", r.URL.Path)
-		gotQuery = r.URL.RawQuery
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"message":"Success","data":{"nextCursor":7,"links":[{"id":1,"name":"Go","url":"https://go.dev"}]}}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
 
-	sort := 2
-	links, err := client.Search.Links(t.Context(), SearchOptions{SearchQueryString: "go", Sort: &sort, Cursor: 3})
+	// One word with no separators, so the search can't match other links on a shared prefix.
+	word := strings.ReplaceAll(uniqueName("searchable"), "-", "")
+	link, err := client.Links.Create(t.Context(), CreateLinkRequest{
+		Name:       word,
+		URL:        uniqueURL(),
+		Collection: Collection{ID: collection.ID},
+	})
 	assert.NoError(err)
-	assert.Equal("cursor=3&searchQueryString=go&sort=2", gotQuery)
-	assert.Len(links, 1)
-	assert.Equal("Go", links[0].Name)
+	t.Cleanup(func() { _ = client.Links.Delete(t.Context(), link.ID) })
+
+	// New links reach the search index asynchronously.
+	var found []Link
+	assert.Eventually(func() bool {
+		links, err := client.Search.Links(t.Context(), SearchOptions{SearchQueryString: word})
+		if err != nil {
+			return false
+		}
+		found = links
+
+		return len(links) > 0
+	}, time.Minute, time.Second)
+
+	assert.Equal([]int{link.ID}, linkIDs(found))
 }
 
-func TestSearchService_Links_OmitsUnsetQueryParams(t *testing.T) {
+func TestSearchService_Links_NoMatches(t *testing.T) {
 	assert := require.New(t)
 
-	var gotQuery string
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		gotQuery = r.URL.RawQuery
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"message":"Success","data":{"links":[]}}`))
-	})
+	client := newTestClient(t)
 
-	_, err := client.Search.Links(t.Context(), SearchOptions{})
+	links, err := client.Search.Links(t.Context(), SearchOptions{SearchQueryString: uniqueName("nothing")})
 	assert.NoError(err)
-	assert.Equal("", gotQuery)
+	assert.Empty(links)
 }

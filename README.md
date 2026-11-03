@@ -154,10 +154,18 @@ Options: `WithHTTPClient(*http.Client)` for timeouts, proxies or custom transpor
 
 ## Development
 
+The tests run against a real, throwaway Linkwarden instance instead of mocked responses. Start
+one in Docker (it also creates a test user and API token), then run the tests against it:
+
 ```bash
-go test ./... -race      # unit tests
+scripts/dev-linkwarden.sh up
+eval "$(scripts/dev-linkwarden.sh env)"
+go test ./... -race
 golangci-lint run        # lint (config in .golangci.yml)
 ```
+
+Without `LINKWARDEN_URL` and `LINKWARDEN_TOKEN` the tests are skipped locally, and fail in CI.
+`scripts/dev-linkwarden.sh reset` deletes the instance and its data.
 
 CI runs tests, `golangci-lint`, `gosec` and `govulncheck` on pushes to `main` and on pull requests.
 

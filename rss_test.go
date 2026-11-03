@@ -1,58 +1,77 @@
 package linkwarden
 
 import (
-	"encoding/json"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestRSSService_List(t *testing.T) {
-	assert := require.New(t)
+const testFeedURL = "https://go.dev/blog/feed.atom"
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodGet, r.Method)
-		assert.Equal("/api/v1/rss", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":[{"id":1,"name":"Blog","url":"https://blog.example.com/rss","collectionId":2}]}`))
+func createTestSubscription(t *testing.T, c *Client, collectionID int) *RSSSubscription {
+	t.Helper()
+
+	sub, err := c.RSS.Create(t.Context(), CreateRSSRequest{
+		Name:         uniqueName("feed"),
+		URL:          testFeedURL,
+		CollectionID: collectionID,
 	})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.RSS.Delete(t.Context(), sub.ID) })
 
-	subs, err := client.RSS.List(t.Context())
-	assert.NoError(err)
-	assert.Len(subs, 1)
-	assert.Equal("Blog", subs[0].Name)
-	assert.Equal(2, subs[0].CollectionID)
+	return sub
 }
 
 func TestRSSService_Create(t *testing.T) {
 	assert := require.New(t)
 
-	var gotBody CreateRSSRequest
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodPost, r.Method)
-		assert.Equal("/api/v1/rss", r.URL.Path)
-		assert.NoError(json.NewDecoder(r.Body).Decode(&gotBody))
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":{"id":3,"name":"News","url":"https://news.example.com/rss"}}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
 
-	sub, err := client.RSS.Create(t.Context(), CreateRSSRequest{Name: "News", URL: "https://news.example.com/rss", CollectionID: 5})
+	sub := createTestSubscription(t, client, collection.ID)
+	assert.NotZero(sub.ID)
+	assert.Equal(testFeedURL, sub.URL)
+	assert.Equal(collection.ID, sub.CollectionID)
+}
+
+func TestRSSService_List(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	sub := createTestSubscription(t, client, collection.ID)
+
+	subs, err := client.RSS.List(t.Context())
 	assert.NoError(err)
-	assert.Equal(3, sub.ID)
-	assert.Equal("News", gotBody.Name)
-	assert.Equal(5, gotBody.CollectionID)
+
+	var ids []int
+	for _, s := range subs {
+		ids = append(ids, s.ID)
+	}
+	assert.Contains(ids, sub.ID)
 }
 
 func TestRSSService_Delete(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodDelete, r.Method)
-		assert.Equal("/api/v1/rss/9", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":"RSS subscription deleted."}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	sub := createTestSubscription(t, client, collection.ID)
 
-	assert.NoError(client.RSS.Delete(t.Context(), 9))
+	assert.NoError(client.RSS.Delete(t.Context(), sub.ID))
+
+	subs, err := client.RSS.List(t.Context())
+	assert.NoError(err)
+	for _, s := range subs {
+		assert.NotEqual(sub.ID, s.ID, "deleted subscription should not be listed")
+	}
+}
+
+func TestRSSService_Delete_NotFound(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+
+	err := client.RSS.Delete(t.Context(), 999999999)
+	assert.True(IsNotFound(err))
 }

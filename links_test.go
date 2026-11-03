@@ -1,199 +1,273 @@
 package linkwarden
 
 import (
-	"encoding/json"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestLinksService_List(t *testing.T) {
+func TestLinksService_Create(t *testing.T) {
 	assert := require.New(t)
 
-	var gotMethod, gotPath, gotQuery string
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		gotMethod = r.Method
-		gotPath = r.URL.Path
-		gotQuery = r.URL.RawQuery
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":[{"id":1,"name":"Example","url":"https://example.com"}]}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	url := uniqueURL()
+	tagName := uniqueName("tag")
 
-	sort := 2
-	links, err := client.Links.List(t.Context(), ListLinksOptions{
-		Sort:         &sort,
-		CollectionID: 3,
-		PinnedOnly:   true,
+	link, err := client.Links.Create(t.Context(), CreateLinkRequest{
+		Name:        "New",
+		URL:         url,
+		Description: "created by the SDK tests",
+		Tags:        []Tag{{Name: tagName}},
+		Collection:  Collection{ID: collection.ID},
 	})
 	assert.NoError(err)
-	assert.Equal(http.MethodGet, gotMethod)
-	assert.Equal("/api/v1/links", gotPath)
-	assert.Equal("collectionId=3&pinnedOnly=true&sort=2", gotQuery)
-	assert.Len(links, 1)
-	assert.Equal("Example", links[0].Name)
+	t.Cleanup(func() { _ = client.Links.Delete(t.Context(), link.ID) })
+	t.Cleanup(func() { deleteTagByName(t, client, tagName) })
+
+	assert.NotZero(link.ID)
+	assert.Equal("New", link.Name)
+	assert.Equal(url, link.URL)
+	assert.Equal(collection.ID, link.CollectionID)
+	assert.Len(link.Tags, 1)
+	assert.Equal(tagName, link.Tags[0].Name)
 }
 
 func TestLinksService_Get(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodGet, r.Method)
-		assert.Equal("/api/v1/links/5", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":{"id":5,"name":"Example","url":"https://example.com"}}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	link := createTestLink(t, client, collection.ID)
 
-	link, err := client.Links.Get(t.Context(), 5)
+	got, err := client.Links.Get(t.Context(), link.ID)
 	assert.NoError(err)
-	assert.Equal(5, link.ID)
+	assert.Equal(link.ID, got.ID)
+	assert.Equal(link.URL, got.URL)
+	assert.Equal(collection.ID, got.Collection.ID)
 }
 
-func TestLinksService_Get_NotFound(t *testing.T) {
+func TestLinksService_Get_Inaccessible(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-		_, _ = w.Write([]byte(`{"response":"Link not found."}`))
-	})
+	client := newTestClient(t)
 
-	_, err := client.Links.Get(t.Context(), 999)
+	_, err := client.Links.Get(t.Context(), 999999999)
 	assert.Error(err)
-	assert.True(IsNotFound(err))
+
+	var apiErr *APIError
+	assert.ErrorAs(err, &apiErr)
+	assert.NotEmpty(apiErr.Message)
 }
 
-func TestLinksService_Create(t *testing.T) {
+func TestLinksService_List_FiltersByCollection(t *testing.T) {
 	assert := require.New(t)
 
-	var gotBody CreateLinkRequest
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodPost, r.Method)
-		assert.Equal("/api/v1/links", r.URL.Path)
-		assert.NoError(json.NewDecoder(r.Body).Decode(&gotBody))
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":{"id":9,"name":"New","url":"https://example.com"}}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	other := createTestCollection(t, client)
+	first := createTestLink(t, client, collection.ID)
+	second := createTestLink(t, client, collection.ID)
+	createTestLink(t, client, other.ID)
 
-	link, err := client.Links.Create(t.Context(), CreateLinkRequest{
-		Name:       "New",
-		URL:        "https://example.com",
-		Collection: Collection{ID: 2},
+	links, err := client.Links.List(t.Context(), ListLinksOptions{CollectionID: collection.ID})
+	assert.NoError(err)
+	assert.ElementsMatch([]int{first.ID, second.ID}, linkIDs(links))
+}
+
+func TestLinksService_List_FiltersByTag(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	tag := createTestTag(t, client)
+
+	tagged, err := client.Links.Create(t.Context(), CreateLinkRequest{
+		Name:       uniqueName("tagged"),
+		URL:        uniqueURL(),
+		Tags:       []Tag{{Name: tag.Name}},
+		Collection: Collection{ID: collection.ID},
 	})
 	assert.NoError(err)
-	assert.Equal(9, link.ID)
-	assert.Equal("New", gotBody.Name)
-	assert.Equal(2, gotBody.Collection.ID)
+	t.Cleanup(func() { _ = client.Links.Delete(t.Context(), tagged.ID) })
+	createTestLink(t, client, collection.ID)
+
+	links, err := client.Links.List(t.Context(), ListLinksOptions{TagID: tag.ID})
+	assert.NoError(err)
+	assert.Equal([]int{tagged.ID}, linkIDs(links))
 }
 
 func TestLinksService_Update(t *testing.T) {
 	assert := require.New(t)
 
-	var gotBody UpdateLinkRequest
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodPut, r.Method)
-		assert.Equal("/api/v1/links/7", r.URL.Path)
-		assert.NoError(json.NewDecoder(r.Body).Decode(&gotBody))
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"id":7,"name":"Renamed","url":"https://example.com"}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	link := createTestLink(t, client, collection.ID)
 
-	link, err := client.Links.Update(t.Context(), 7, UpdateLinkRequest{Name: "Renamed"})
+	updated, err := client.Links.Update(t.Context(), link.ID, UpdateLinkRequest{
+		Name:        "Renamed",
+		Description: "updated",
+	})
 	assert.NoError(err)
-	assert.Equal(7, link.ID)
-	assert.Equal("Renamed", link.Name)
-	assert.Equal(7, gotBody.ID)
+	assert.Equal(link.ID, updated.ID)
+
+	got, err := client.Links.Get(t.Context(), link.ID)
+	assert.NoError(err)
+	assert.Equal("Renamed", got.Name)
+	assert.Equal("updated", got.Description)
+}
+
+func TestLinksService_Update_KeepsTagsAndCollection(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	tag := createTestTag(t, client)
+	link, err := client.Links.Create(t.Context(), CreateLinkRequest{
+		Name:       uniqueName("link"),
+		URL:        uniqueURL(),
+		Tags:       []Tag{{Name: tag.Name}},
+		Collection: Collection{ID: collection.ID},
+	})
+	assert.NoError(err)
+	t.Cleanup(func() { _ = client.Links.Delete(t.Context(), link.ID) })
+
+	_, err = client.Links.Update(t.Context(), link.ID, UpdateLinkRequest{Name: "Renamed"})
+	assert.NoError(err)
+
+	got, err := client.Links.Get(t.Context(), link.ID)
+	assert.NoError(err)
+	assert.Equal("Renamed", got.Name)
+	assert.Equal(link.URL, got.URL)
+	assert.Equal(collection.ID, got.Collection.ID)
+	assert.Len(got.Tags, 1)
+	assert.Equal(tag.Name, got.Tags[0].Name)
+}
+
+func TestLinksService_Update_MovesToCollection(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	from := createTestCollection(t, client)
+	to := createTestCollection(t, client)
+	link := createTestLink(t, client, from.ID)
+
+	_, err := client.Links.Update(t.Context(), link.ID, UpdateLinkRequest{Collection: Collection{ID: to.ID}})
+	assert.NoError(err)
+
+	got, err := client.Links.Get(t.Context(), link.ID)
+	assert.NoError(err)
+	assert.Equal(to.ID, got.Collection.ID)
 }
 
 func TestLinksService_Delete(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodDelete, r.Method)
-		assert.Equal("/api/v1/links/3", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":"Link deleted."}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	link := createTestLink(t, client, collection.ID)
 
-	assert.NoError(client.Links.Delete(t.Context(), 3))
+	assert.NoError(client.Links.Delete(t.Context(), link.ID))
+
+	links, err := client.Links.List(t.Context(), ListLinksOptions{CollectionID: collection.ID})
+	assert.NoError(err)
+	assert.Empty(links)
 }
 
 func TestLinksService_BulkUpdate(t *testing.T) {
 	assert := require.New(t)
 
-	var gotBody BulkUpdateLinksRequest
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodPut, r.Method)
-		assert.Equal("/api/v1/links", r.URL.Path)
-		assert.NoError(json.NewDecoder(r.Body).Decode(&gotBody))
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":"Links updated."}`))
-	})
+	client := newTestClient(t)
+	from := createTestCollection(t, client)
+	to := createTestCollection(t, client)
+	first := createTestLink(t, client, from.ID)
+	second := createTestLink(t, client, from.ID)
+	tag := createTestTag(t, client)
 
 	err := client.Links.BulkUpdate(t.Context(), BulkUpdateLinksRequest{
-		Links:              []Link{{ID: 1}, {ID: 2}},
+		Links:              []Link{*first, *second},
 		RemovePreviousTags: true,
+		NewData: BulkUpdateLinksNewData{
+			CollectionID: to.ID,
+			Tags:         []Tag{{Name: tag.Name}},
+		},
 	})
 	assert.NoError(err)
-	assert.Len(gotBody.Links, 2)
-	assert.True(gotBody.RemovePreviousTags)
+
+	moved, err := client.Links.List(t.Context(), ListLinksOptions{CollectionID: to.ID})
+	assert.NoError(err)
+	assert.ElementsMatch([]int{first.ID, second.ID}, linkIDs(moved))
+	for _, l := range moved {
+		assert.Len(l.Tags, 1)
+		assert.Equal(tag.Name, l.Tags[0].Name)
+	}
 }
 
 func TestLinksService_BulkDelete(t *testing.T) {
 	assert := require.New(t)
 
-	var gotBody struct {
-		LinkIDs []int `json:"linkIds"`
-	}
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodDelete, r.Method)
-		assert.Equal("/api/v1/links", r.URL.Path)
-		assert.NoError(json.NewDecoder(r.Body).Decode(&gotBody))
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":"Links deleted."}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	first := createTestLink(t, client, collection.ID)
+	second := createTestLink(t, client, collection.ID)
+	kept := createTestLink(t, client, collection.ID)
 
-	assert.NoError(client.Links.BulkDelete(t.Context(), []int{1, 2, 3}))
-	assert.Equal([]int{1, 2, 3}, gotBody.LinkIDs)
+	assert.NoError(client.Links.BulkDelete(t.Context(), []int{first.ID, second.ID}))
+
+	links, err := client.Links.List(t.Context(), ListLinksOptions{CollectionID: collection.ID})
+	assert.NoError(err)
+	assert.Equal([]int{kept.ID}, linkIDs(links))
 }
 
 func TestLinksService_Archive(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodPut, r.Method)
-		assert.Equal("/api/v1/links/4/archive", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":"Link archived."}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	link := createTestLink(t, client, collection.ID)
 
-	assert.NoError(client.Links.Archive(t.Context(), 4))
+	assert.NoError(client.Links.Archive(t.Context(), link.ID))
 }
 
 func TestLinksService_DeleteArchive(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodDelete, r.Method)
-		assert.Equal("/api/v1/links/archive", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":"Archived files deleted."}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	link := createTestLink(t, client, collection.ID)
 
-	assert.NoError(client.Links.DeleteArchive(t.Context(), []int{4}))
+	assert.NoError(client.Links.DeleteArchive(t.Context(), []int{link.ID}))
 }
 
 func TestLinksService_Highlights(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodGet, r.Method)
-		assert.Equal("/api/v1/links/6/highlights", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":[{"id":1,"linkId":6,"text":"quote","color":"yellow","startOffset":0,"endOffset":5}]}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	link := createTestLink(t, client, collection.ID)
 
-	highlights, err := client.Links.Highlights(t.Context(), 6)
+	highlights, err := client.Links.Highlights(t.Context(), link.ID)
+	assert.NoError(err)
+	assert.Empty(highlights)
+
+	created := createTestHighlight(t, client, link.ID)
+
+	highlights, err = client.Links.Highlights(t.Context(), link.ID)
 	assert.NoError(err)
 	assert.Len(highlights, 1)
-	assert.Equal("quote", highlights[0].Text)
+	assert.Equal(created.ID, highlights[0].ID)
+}
+
+func deleteTagByName(t *testing.T, c *Client, name string) {
+	t.Helper()
+
+	tags, err := c.Tags.List(t.Context(), ListTagsOptions{Search: name})
+	if err != nil {
+		return
+	}
+	for _, tag := range tags {
+		if tag.Name == name {
+			_ = c.Tags.Delete(t.Context(), tag.ID)
+		}
+	}
 }

@@ -9,14 +9,25 @@ permissions:
   contents: read
 
 jobs:
+  # The tests run against a real, throwaway Linkwarden instance rather than mocked responses.
   test:
     runs-on: ubuntu-latest
+    env:
+      # Pinned so upstream releases can't break CI unannounced. Bump it deliberately.
+      LINKWARDEN_VERSION: v2.16.3
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - name: 🐳 Start Linkwarden
+        run: |
+          scripts/dev-linkwarden.sh up
+          scripts/dev-linkwarden.sh env | sed 's/^export //; s/"//g' >> "$GITHUB_ENV"
       - run: go build ./...
       - run: go vet ./...
       - run: go test ./... -race -cover
+      - name: 📜 Linkwarden logs
+        if: failure()
+        run: docker compose logs linkwarden
 

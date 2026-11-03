@@ -1,109 +1,102 @@
 package linkwarden
 
 import (
-	"encoding/json"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+func TestTagsService_CreateOrUpdateBulk(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	first, second := uniqueName("tag"), uniqueName("tag")
+
+	tags, err := client.Tags.CreateOrUpdateBulk(t.Context(), []CreateOrUpdateTagInput{{Label: first}, {Label: second}})
+	assert.NoError(err)
+	for _, tag := range tags {
+		t.Cleanup(func() { _ = client.Tags.Delete(t.Context(), tag.ID) })
+	}
+
+	assert.Len(tags, 2)
+	assert.ElementsMatch([]string{first, second}, []string{tags[0].Name, tags[1].Name})
+}
+
 func TestTagsService_List(t *testing.T) {
 	assert := require.New(t)
 
-	var gotQuery string
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodGet, r.Method)
-		assert.Equal("/api/v1/tags", r.URL.Path)
-		gotQuery = r.URL.RawQuery
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"message":"Success","success":true,"data":{"nextCursor":42,"tags":[{"id":1,"name":"Technology"}]}}`))
-	})
+	client := newTestClient(t)
+	tag := createTestTag(t, client)
 
-	tags, err := client.Tags.List(t.Context(), ListTagsOptions{Search: "tech", Cursor: 5})
+	tags, err := client.Tags.List(t.Context(), ListTagsOptions{Search: tag.Name})
 	assert.NoError(err)
-	assert.Equal("cursor=5&search=tech", gotQuery)
 	assert.Len(tags, 1)
-	assert.Equal("Technology", tags[0].Name)
+	assert.Equal(tag.ID, tags[0].ID)
+	assert.Equal(tag.Name, tags[0].Name)
 }
 
 func TestTagsService_Get(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodGet, r.Method)
-		assert.Equal("/api/v1/tags/1", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":{"id":1,"name":"Technology"}}`))
-	})
+	client := newTestClient(t)
+	tag := createTestTag(t, client)
 
-	tag, err := client.Tags.Get(t.Context(), 1)
+	got, err := client.Tags.Get(t.Context(), tag.ID)
 	assert.NoError(err)
-	assert.Equal("Technology", tag.Name)
+	assert.Equal(tag.ID, got.ID)
+	assert.Equal(tag.Name, got.Name)
 }
 
-func TestTagsService_CreateOrUpdateBulk(t *testing.T) {
+func TestTagsService_Get_NotFound(t *testing.T) {
 	assert := require.New(t)
 
-	var gotBody struct {
-		Tags []CreateOrUpdateTagInput `json:"tags"`
-	}
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodPost, r.Method)
-		assert.Equal("/api/v1/tags", r.URL.Path)
-		assert.NoError(json.NewDecoder(r.Body).Decode(&gotBody))
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":[{"id":2,"name":"Reading"}]}`))
-	})
+	client := newTestClient(t)
 
-	tags, err := client.Tags.CreateOrUpdateBulk(t.Context(), []CreateOrUpdateTagInput{{Label: "Reading"}})
-	assert.NoError(err)
-	assert.Len(tags, 1)
-	assert.Equal("Reading", gotBody.Tags[0].Label)
+	_, err := client.Tags.Get(t.Context(), 999999999)
+	assert.Error(err)
+	assert.True(IsNotFound(err))
 }
 
 func TestTagsService_Update(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodPut, r.Method)
-		assert.Equal("/api/v1/tags/3", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":{"id":3,"name":"Renamed"}}`))
-	})
+	client := newTestClient(t)
+	tag := createTestTag(t, client)
+	renamed := uniqueName("renamed")
 
-	tag, err := client.Tags.Update(t.Context(), 3, "Renamed")
+	updated, err := client.Tags.Update(t.Context(), tag.ID, renamed)
 	assert.NoError(err)
-	assert.Equal("Renamed", tag.Name)
+	assert.Equal(renamed, updated.Name)
+
+	got, err := client.Tags.Get(t.Context(), tag.ID)
+	assert.NoError(err)
+	assert.Equal(renamed, got.Name)
 }
 
 func TestTagsService_Delete(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodDelete, r.Method)
-		assert.Equal("/api/v1/tags/3", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":"Tag deleted."}`))
-	})
+	client := newTestClient(t)
+	tag := createTestTag(t, client)
 
-	assert.NoError(client.Tags.Delete(t.Context(), 3))
+	assert.NoError(client.Tags.Delete(t.Context(), tag.ID))
+
+	_, err := client.Tags.Get(t.Context(), tag.ID)
+	assert.True(IsNotFound(err))
 }
 
 func TestTagsService_BulkDelete(t *testing.T) {
 	assert := require.New(t)
 
-	var gotBody struct {
-		TagIDs []int `json:"tagIds"`
-	}
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodDelete, r.Method)
-		assert.Equal("/api/v1/tags", r.URL.Path)
-		assert.NoError(json.NewDecoder(r.Body).Decode(&gotBody))
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":"Tags deleted."}`))
-	})
+	client := newTestClient(t)
+	first, second, kept := createTestTag(t, client), createTestTag(t, client), createTestTag(t, client)
 
-	assert.NoError(client.Tags.BulkDelete(t.Context(), []int{1, 2}))
-	assert.Equal([]int{1, 2}, gotBody.TagIDs)
+	assert.NoError(client.Tags.BulkDelete(t.Context(), []int{first.ID, second.ID}))
+
+	for _, id := range []int{first.ID, second.ID} {
+		_, err := client.Tags.Get(t.Context(), id)
+		assert.True(IsNotFound(err))
+	}
+	_, err := client.Tags.Get(t.Context(), kept.ID)
+	assert.NoError(err)
 }

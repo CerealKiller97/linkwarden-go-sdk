@@ -1,106 +1,156 @@
 package linkwarden
 
 import (
-	"encoding/json"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+func TestCollectionsService_Create(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	name := uniqueName("collection")
+
+	collection, err := client.Collections.Create(t.Context(), CreateCollectionRequest{
+		Name:        name,
+		Description: "created by the SDK tests",
+		Color:       "#f59e0b",
+	})
+	assert.NoError(err)
+	t.Cleanup(func() { _ = client.Collections.Delete(t.Context(), collection.ID) })
+
+	assert.NotZero(collection.ID)
+	assert.Equal(name, collection.Name)
+	assert.Equal("created by the SDK tests", collection.Description)
+	assert.Equal("#f59e0b", collection.Color)
+}
+
+func TestCollectionsService_Create_WithParent(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	parent := createTestCollection(t, client)
+
+	child, err := client.Collections.Create(t.Context(), CreateCollectionRequest{
+		Name:     uniqueName("child"),
+		ParentID: parent.ID,
+	})
+	assert.NoError(err)
+	t.Cleanup(func() { _ = client.Collections.Delete(t.Context(), child.ID) })
+
+	assert.NotNil(child.ParentID)
+	assert.Equal(parent.ID, *child.ParentID)
+}
+
 func TestCollectionsService_List(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodGet, r.Method)
-		assert.Equal("/api/v1/collections", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":[{"id":1,"name":"Unorganized"}]}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
 
 	collections, err := client.Collections.List(t.Context())
 	assert.NoError(err)
-	assert.Len(collections, 1)
-	assert.Equal("Unorganized", collections[0].Name)
+
+	var found *Collection
+	for i := range collections {
+		if collections[i].ID == collection.ID {
+			found = &collections[i]
+		}
+	}
+	assert.NotNil(found, "new collection should be listed")
+	assert.Equal(collection.Name, found.Name)
 }
 
 func TestCollectionsService_Get(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodGet, r.Method)
-		assert.Equal("/api/v1/collections/2", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":{"id":2,"name":"Reading List"}}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
 
-	collection, err := client.Collections.Get(t.Context(), 2)
+	got, err := client.Collections.Get(t.Context(), collection.ID)
 	assert.NoError(err)
-	assert.Equal(2, collection.ID)
-	assert.Equal("Reading List", collection.Name)
+	assert.Equal(collection.ID, got.ID)
+	assert.Equal(collection.Name, got.Name)
 }
 
-func TestCollectionsService_Create(t *testing.T) {
+func TestCollectionsService_Get_NotFound(t *testing.T) {
 	assert := require.New(t)
 
-	var gotBody CreateCollectionRequest
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodPost, r.Method)
-		// The SDK deliberately posts to the un-suffixed path, matching the
-		// proven-working live-instance behavior rather than the OpenAPI spec's
-		// (likely mis-documented) {id}-suffixed create path.
-		assert.Equal("/api/v1/collections", r.URL.Path)
-		assert.NoError(json.NewDecoder(r.Body).Decode(&gotBody))
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":{"id":10,"name":"New Collection"}}`))
-	})
+	client := newTestClient(t)
 
-	collection, err := client.Collections.Create(t.Context(), CreateCollectionRequest{Name: "New Collection"})
-	assert.NoError(err)
-	assert.Equal(10, collection.ID)
-	assert.Equal("New Collection", gotBody.Name)
+	_, err := client.Collections.Get(t.Context(), 999999999)
+	assert.True(IsNotFound(err))
 }
 
 func TestCollectionsService_Update(t *testing.T) {
 	assert := require.New(t)
 
-	var gotBody UpdateCollectionRequest
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodPut, r.Method)
-		assert.Equal("/api/v1/collections/3", r.URL.Path)
-		assert.NoError(json.NewDecoder(r.Body).Decode(&gotBody))
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":{"id":3,"name":"Renamed"}}`))
-	})
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	renamed := uniqueName("renamed")
 
-	collection, err := client.Collections.Update(t.Context(), 3, UpdateCollectionRequest{Name: "Renamed", IsPublic: true})
+	updated, err := client.Collections.Update(t.Context(), collection.ID, UpdateCollectionRequest{
+		Name:        renamed,
+		Description: "updated",
+		Color:       "#10b981",
+	})
 	assert.NoError(err)
-	assert.Equal("Renamed", collection.Name)
-	assert.True(gotBody.IsPublic)
+	assert.Equal(renamed, updated.Name)
+
+	got, err := client.Collections.Get(t.Context(), collection.ID)
+	assert.NoError(err)
+	assert.Equal(renamed, got.Name)
+	assert.Equal("updated", got.Description)
+	assert.Equal("#10b981", got.Color)
+}
+
+func TestCollectionsService_Update_KeepsUnsetFields(t *testing.T) {
+	assert := require.New(t)
+
+	client := newTestClient(t)
+	collection, err := client.Collections.Create(t.Context(), CreateCollectionRequest{
+		Name:        uniqueName("collection"),
+		Description: "kept",
+		Color:       "#f59e0b",
+	})
+	assert.NoError(err)
+	t.Cleanup(func() { _ = client.Collections.Delete(t.Context(), collection.ID) })
+
+	_, err = client.Collections.Update(t.Context(), collection.ID, UpdateCollectionRequest{Color: "#10b981"})
+	assert.NoError(err)
+
+	got, err := client.Collections.Get(t.Context(), collection.ID)
+	assert.NoError(err)
+	assert.Equal(collection.Name, got.Name)
+	assert.Equal("kept", got.Description)
+	assert.Equal("#10b981", got.Color)
 }
 
 func TestCollectionsService_Delete(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(http.MethodDelete, r.Method)
-		assert.Equal("/api/v1/collections/4", r.URL.Path)
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"response":"Collection deleted."}`))
-	})
+	client := newTestClient(t)
+	collection, err := client.Collections.Create(t.Context(), CreateCollectionRequest{Name: uniqueName("collection")})
+	assert.NoError(err)
 
-	assert.NoError(client.Collections.Delete(t.Context(), 4))
+	assert.NoError(client.Collections.Delete(t.Context(), collection.ID))
+
+	collections, err := client.Collections.List(t.Context())
+	assert.NoError(err)
+	for _, c := range collections {
+		assert.NotEqual(collection.ID, c.ID, "deleted collection should not be listed")
+	}
 }
 
-func TestCollectionsService_Delete_Conflict(t *testing.T) {
+func TestCollectionsService_Delete_Inaccessible(t *testing.T) {
 	assert := require.New(t)
 
-	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusConflict)
-		_, _ = w.Write([]byte(`{"message":"Cannot delete collection with links."}`))
-	})
+	client := newTestClient(t)
 
-	err := client.Collections.Delete(t.Context(), 4)
+	err := client.Collections.Delete(t.Context(), 999999999)
 	assert.Error(err)
-	assert.True(IsConflict(err))
+
+	var apiErr *APIError
+	assert.ErrorAs(err, &apiErr)
 }

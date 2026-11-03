@@ -27,7 +27,8 @@ if [[ -z "${notes//[[:space:]]/}" ]]; then
 	exit 1
 fi
 
-tested="$(grep -m1 '^Tested against Linkwarden:' <<<"$notes" | sed 's/^Tested against Linkwarden:[[:space:]]*//; s/[[:space:]]*$//' || true)"
+# The line may start with an emoji, e.g. "🧪 Tested against Linkwarden: v2.16.3".
+tested="$(grep -m1 'Tested against Linkwarden:' <<<"$notes" | sed 's/.*Tested against Linkwarden:[[:space:]]*//; s/[[:space:]]*$//' || true)"
 if [[ "$tested" != "$pinned" ]]; then
 	echo "error: CHANGELOG.md [$version] says 'Tested against Linkwarden: ${tested:-<missing>}'," >&2
 	echo "       but .linkwarden-version pins $pinned" >&2

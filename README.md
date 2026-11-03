@@ -469,9 +469,11 @@ tests catch.
 
 To cut a release:
 
-1. Move the `[Unreleased]` entries in `CHANGELOG.md` under a new `## [x.y.z] - YYYY-MM-DD`
-   heading, keep its `Tested against Linkwarden: <version>` line, and update the compare
-   links at the bottom.
+1. In `CHANGELOG.md`, which follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+   rename `[Unreleased]` to `## [x.y.z] - YYYY-MM-DD`, keep its
+   `🧪 Tested against Linkwarden: <version>` line, start a new empty `[Unreleased]`, and update
+   the compare links at the bottom. The comment at the top of the file lists the section
+   headings to use.
 2. Check the notes: `scripts/release-notes.sh vX.Y.Z`
 3. Merge that to `main`, then tag and push: `git tag -a vX.Y.Z -m vX.Y.Z && git push origin vX.Y.Z`
 

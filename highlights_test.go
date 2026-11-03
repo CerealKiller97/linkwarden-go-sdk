@@ -8,6 +8,7 @@ import (
 
 func createTestHighlight(t *testing.T, c *Client, linkID int) *Highlight {
 	t.Helper()
+	assert := require.New(t)
 
 	highlight, err := c.Highlights.Create(t.Context(), CreateHighlightRequest{
 		Color:       "yellow",
@@ -17,20 +18,32 @@ func createTestHighlight(t *testing.T, c *Client, linkID int) *Highlight {
 		Text:        "Hello",
 		LinkID:      linkID,
 	})
-	require.NoError(t, err)
+	assert.NoError(err)
 	t.Cleanup(func() { _ = c.Highlights.Delete(t.Context(), highlight.ID) })
 
 	return highlight
 }
 
-func TestHighlightsService_Create(t *testing.T) {
+func TestHighlightsServiceCreate(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	collection := createTestCollection(t, client)
 	link := createTestLink(t, client, collection.ID)
 
-	highlight := createTestHighlight(t, client, link.ID)
+	// Act
+	highlight, err := client.Highlights.Create(t.Context(), CreateHighlightRequest{
+		Color:       "yellow",
+		Comment:     "worth rereading",
+		StartOffset: 0,
+		EndOffset:   5,
+		Text:        "Hello",
+		LinkID:      link.ID,
+	})
+
+	// Assert
+	assert.NoError(err)
+	t.Cleanup(func() { _ = client.Highlights.Delete(t.Context(), highlight.ID) })
 	assert.NotZero(highlight.ID)
 	assert.Equal(link.ID, highlight.LinkID)
 	assert.Equal("yellow", highlight.Color)
@@ -39,16 +52,19 @@ func TestHighlightsService_Create(t *testing.T) {
 	assert.Equal(5, highlight.EndOffset)
 }
 
-func TestHighlightsService_Delete(t *testing.T) {
+func TestHighlightsServiceDelete(t *testing.T) {
+	// Arrange
 	assert := require.New(t)
-
 	client := newTestClient(t)
 	collection := createTestCollection(t, client)
 	link := createTestLink(t, client, collection.ID)
 	highlight := createTestHighlight(t, client, link.ID)
 
-	assert.NoError(client.Highlights.Delete(t.Context(), highlight.ID))
+	// Act
+	err := client.Highlights.Delete(t.Context(), highlight.ID)
 
+	// Assert
+	assert.NoError(err)
 	highlights, err := client.Links.Highlights(t.Context(), link.ID)
 	assert.NoError(err)
 	assert.Empty(highlights)

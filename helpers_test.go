@@ -48,9 +48,10 @@ func uniqueURL() string {
 
 func createTestCollection(t *testing.T, c *Client) *Collection {
 	t.Helper()
+	assert := require.New(t)
 
 	collection, err := c.Collections.Create(t.Context(), CreateCollectionRequest{Name: uniqueName("collection")})
-	require.NoError(t, err)
+	assert.NoError(err)
 	t.Cleanup(func() { _ = c.Collections.Delete(t.Context(), collection.ID) })
 
 	return collection
@@ -58,13 +59,14 @@ func createTestCollection(t *testing.T, c *Client) *Collection {
 
 func createTestLink(t *testing.T, c *Client, collectionID int) *Link {
 	t.Helper()
+	assert := require.New(t)
 
 	link, err := c.Links.Create(t.Context(), CreateLinkRequest{
 		Name:       uniqueName("link"),
 		URL:        uniqueURL(),
 		Collection: Collection{ID: collectionID},
 	})
-	require.NoError(t, err)
+	assert.NoError(err)
 	t.Cleanup(func() { _ = c.Links.Delete(t.Context(), link.ID) })
 
 	return link
@@ -72,10 +74,11 @@ func createTestLink(t *testing.T, c *Client, collectionID int) *Link {
 
 func createTestTag(t *testing.T, c *Client) *TagInfo {
 	t.Helper()
+	assert := require.New(t)
 
 	tags, err := c.Tags.CreateOrUpdateBulk(t.Context(), []CreateOrUpdateTagInput{{Label: uniqueName("tag")}})
-	require.NoError(t, err)
-	require.Len(t, tags, 1)
+	assert.NoError(err)
+	assert.Len(tags, 1)
 	t.Cleanup(func() { _ = c.Tags.Delete(t.Context(), tags[0].ID) })
 
 	return &tags[0]

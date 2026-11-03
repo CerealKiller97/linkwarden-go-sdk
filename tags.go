@@ -46,8 +46,15 @@ type tagListData struct {
 }
 
 // CreateOrUpdateTagInput is one entry in a TagsService.CreateOrUpdateBulk request.
+// The archive settings are left nil to keep the tag's (or the user's) defaults.
 type CreateOrUpdateTagInput struct {
-	Label string `json:"label"`
+	Label                   string `json:"label"`
+	ArchiveAsScreenshot     *bool  `json:"archiveAsScreenshot,omitempty"`
+	ArchiveAsMonolith       *bool  `json:"archiveAsMonolith,omitempty"`
+	ArchiveAsPDF            *bool  `json:"archiveAsPDF,omitempty"`
+	ArchiveAsReadable       *bool  `json:"archiveAsReadable,omitempty"`
+	ArchiveAsWaybackMachine *bool  `json:"archiveAsWaybackMachine,omitempty"`
+	AITag                   *bool  `json:"aiTag,omitempty"`
 }
 
 // TagsService accesses the /api/v1/tags endpoints.

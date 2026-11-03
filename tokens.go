@@ -55,7 +55,8 @@ func (s *TokensService) List(ctx context.Context) ([]Token, error) {
 
 // Create creates a new token named name. expires is passed through verbatim to the
 // API as the "expires" field (this instance's existing token-generation flow uses a
-// 0-4 expiry-preset index rather than a duration, so the caller controls the value).
+// 0-4 expiry-preset index rather than a duration, so the caller controls the value;
+// note the OpenAPI spec instead documents it as a duration in seconds, 0 = never).
 func (s *TokensService) Create(ctx context.Context, name string, expires int) (*CreatedToken, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPost,

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -38,6 +39,14 @@ type Client struct {
 	Config      *ConfigService
 	Favicon     *FaviconService
 	Migrations  *MigrationsService
+	Preserved   *PreservedService
+	Avatar      *AvatarService
+	Logins      *LoginsService
+	Public      *PublicService
+	Session     *SessionService
+	Auth        *AuthService
+	Users       *UsersService
+	Worker      *WorkerService
 }
 
 // Option configures a Client.
@@ -61,7 +70,8 @@ func WithLogger(logger *slog.Logger) Option {
 }
 
 // New creates a Linkwarden API client for the given instance base URL, authenticated
-// with the given bearer token (an API token or session token).
+// with the given bearer token (an API token or session token). The token may be
+// empty for the unauthenticated endpoints (Session, Auth, Logins, Public, Config).
 func New(baseURL, token string, opts ...Option) *Client {
 	c := &Client{
 		baseURL:    strings.TrimRight(baseURL, "/"),
@@ -86,6 +96,14 @@ func New(baseURL, token string, opts ...Option) *Client {
 	c.Config = &ConfigService{c: c}
 	c.Favicon = &FaviconService{c: c}
 	c.Migrations = &MigrationsService{c: c}
+	c.Preserved = &PreservedService{c: c}
+	c.Avatar = &AvatarService{c: c}
+	c.Logins = &LoginsService{c: c}
+	c.Public = &PublicService{c: c}
+	c.Session = &SessionService{c: c}
+	c.Auth = &AuthService{c: c}
+	c.Users = &UsersService{c: c}
+	c.Worker = &WorkerService{c: c}
 
 	return c
 }
@@ -131,7 +149,9 @@ func (c *Client) request(ctx context.Context, opt requestOptions) (*http.Respons
 		req.Header.Set("Content-Type", contentType)
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -168,24 +188,27 @@ func buildMultipartBody(fields map[string]string, fileField, filename string, r 
 		}
 	}
 
-	// The API rejects parts sent as application/octet-stream (CreateFormFile's default),
-	// so the part carries the type matching the file's extension.
-	// The API compares the bare media type, so parameters like "; charset=utf-8" are dropped.
-	contentType, _, err := mime.ParseMediaType(mime.TypeByExtension(filepath.Ext(filename)))
-	if err != nil {
-		contentType = "application/octet-stream"
+	// Peek at the start of the file so the part's type can be sniffed when the
+	// extension doesn't give one.
+	head := make([]byte, 512)
+	n, err := io.ReadFull(r, head)
+	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return nil, "", fmt.Errorf("read file contents: %w", err)
 	}
+	head = head[:n]
 
+	// The API rejects parts sent as application/octet-stream (CreateFormFile's default),
+	// so the part carries the file's real type.
 	header := make(textproto.MIMEHeader)
-	header.Set("Content-Disposition", fmt.Sprintf(`form-data; name=%q; filename=%q`, fileField, filename))
-	header.Set("Content-Type", contentType)
+	header.Set("Content-Disposition", mime.FormatMediaType("form-data", map[string]string{"name": fileField, "filename": filename}))
+	header.Set("Content-Type", fileContentType(filename, head))
 
 	part, err := w.CreatePart(header)
 	if err != nil {
 		return nil, "", fmt.Errorf("create form file: %w", err)
 	}
 
-	if _, err := io.Copy(part, r); err != nil {
+	if _, err := io.Copy(part, io.MultiReader(bytes.NewReader(head), r)); err != nil {
 		return nil, "", fmt.Errorf("copy file contents: %w", err)
 	}
 
@@ -194,6 +217,23 @@ func buildMultipartBody(fields map[string]string, fileField, filename string, r 
 	}
 
 	return buf, w.FormDataContentType(), nil
+}
+
+// fileContentType picks the MIME type for an uploaded file from its extension, falling
+// back to sniffing its first bytes. The API compares the bare media type, so parameters
+// like "; charset=utf-8" are dropped.
+func fileContentType(filename string, head []byte) string {
+	contentType := mime.TypeByExtension(filepath.Ext(filename))
+	if contentType == "" {
+		contentType = http.DetectContentType(head)
+	}
+
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return "application/octet-stream"
+	}
+
+	return mediaType
 }
 
 // decodeResponseEnvelope unwraps the common {"response": T} envelope shape.

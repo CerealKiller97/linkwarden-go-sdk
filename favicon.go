@@ -17,6 +17,7 @@ type FaviconService struct {
 	c *Client
 }
 
+// Get downloads the favicon of the site at targetURL, fetched by the Linkwarden server.
 func (s *FaviconService) Get(ctx context.Context, targetURL string) (*Favicon, error) {
 	q := url.Values{}
 	q.Set("url", targetURL)

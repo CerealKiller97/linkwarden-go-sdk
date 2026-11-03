@@ -24,6 +24,7 @@ type ConfigService struct {
 	c *Client
 }
 
+// Get returns the instance's public configuration. It doesn't require authentication.
 func (s *ConfigService) Get(ctx context.Context) (*PublicConfig, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,

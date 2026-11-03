@@ -17,6 +17,7 @@ type AvatarService struct {
 	c *Client
 }
 
+// Get downloads the avatar image of the user with the given ID.
 func (s *AvatarService) Get(ctx context.Context, userID int) (*Avatar, error) {
 	resp, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,

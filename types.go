@@ -21,6 +21,8 @@ type Member struct {
 	User         MemberUser `json:"user,omitzero"`
 }
 
+// MemberUser is the public profile of a collection member's user. Image is nil
+// when the user has no avatar.
 type MemberUser struct {
 	Username string  `json:"username,omitempty"`
 	Name     string  `json:"name,omitempty"`

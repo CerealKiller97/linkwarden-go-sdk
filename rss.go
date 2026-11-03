@@ -33,6 +33,7 @@ type RSSService struct {
 	c *Client
 }
 
+// List returns the authenticated user's RSS subscriptions.
 func (s *RSSService) List(ctx context.Context) ([]RSSSubscription, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -45,6 +46,8 @@ func (s *RSSService) List(ctx context.Context) ([]RSSSubscription, error) {
 	return decodeResponseEnvelope[[]RSSSubscription](body)
 }
 
+// Create subscribes to an RSS feed. New items from the feed are saved as links in
+// the collection named by req.CollectionID or req.CollectionName.
 func (s *RSSService) Create(ctx context.Context, req CreateRSSRequest) (*RSSSubscription, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPost,
@@ -63,6 +66,8 @@ func (s *RSSService) Create(ctx context.Context, req CreateRSSRequest) (*RSSSubs
 	return &sub, nil
 }
 
+// Delete removes the RSS subscription with the given ID. Links it already saved are
+// kept.
 func (s *RSSService) Delete(ctx context.Context, id int) error {
 	_, _, err := s.c.request(ctx, requestOptions{
 		method: http.MethodDelete,

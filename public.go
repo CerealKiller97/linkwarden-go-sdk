@@ -64,6 +64,7 @@ type PublicService struct {
 	c *Client
 }
 
+// Collection returns a public collection. It doesn't require authentication.
 func (s *PublicService) Collection(ctx context.Context, id int) (*Collection, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -81,6 +82,8 @@ func (s *PublicService) Collection(ctx context.Context, id int) (*Collection, er
 	return &collection, nil
 }
 
+// CollectionLinks returns one page of links in a public collection, filtered by
+// opts. It doesn't require authentication.
 func (s *PublicService) CollectionLinks(ctx context.Context, collectionID int, opts ListPublicLinksOptions) ([]Link, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -101,6 +104,8 @@ func (s *PublicService) CollectionLinks(ctx context.Context, collectionID int, o
 	return data.Links, nil
 }
 
+// CollectionTags returns the tags used in a public collection. It doesn't require
+// authentication.
 func (s *PublicService) CollectionTags(ctx context.Context, collectionID int) ([]TagInfo, error) {
 	q := url.Values{}
 	q.Set("collectionId", strconv.Itoa(collectionID))
@@ -124,6 +129,7 @@ func (s *PublicService) CollectionTags(ctx context.Context, collectionID int) ([
 	return data.Tags, nil
 }
 
+// Link returns a link from a public collection. It doesn't require authentication.
 func (s *PublicService) Link(ctx context.Context, id int) (*Link, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
@@ -141,6 +147,7 @@ func (s *PublicService) Link(ctx context.Context, id int) (*Link, error) {
 	return &link, nil
 }
 
+// User returns a user's public profile. It doesn't require authentication.
 func (s *PublicService) User(ctx context.Context, id int) (*PublicUser, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,

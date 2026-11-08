@@ -50,12 +50,17 @@ func (s *SearchService) Links(ctx context.Context, opts SearchOptions) ([]Link, 
 		return nil, err
 	}
 
+	return decodeSearchLinks(body)
+}
+
+// decodeSearchLinks reads the links out of a /api/v1/search response. With no
+// matches the API sends "data": [] instead of {"links": [...]}, so that returns nil.
+func decodeSearchLinks(body []byte) ([]Link, error) {
 	raw, err := decodeDataEnvelope[json.RawMessage](body)
 	if err != nil {
 		return nil, err
 	}
 
-	// With no matches the API sends "data": [] instead of {"links": [...]}.
 	if bytes.HasPrefix(bytes.TrimSpace(raw), []byte("[")) {
 		return nil, nil
 	}

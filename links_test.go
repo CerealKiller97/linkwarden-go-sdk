@@ -85,6 +85,20 @@ func TestLinksServiceListFiltersByCollection(t *testing.T) {
 	assert.ElementsMatch([]int{first.ID, second.ID}, linkIDs(links))
 }
 
+func TestLinksServiceListEmptyCollectionReturnsNil(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+
+	// Act
+	links, err := client.Links.List(t.Context(), ListLinksOptions{CollectionID: collection.ID})
+
+	// Assert
+	assert.NoError(err)
+	assert.Empty(links)
+}
+
 func TestLinksServiceListFiltersByTag(t *testing.T) {
 	// Arrange
 	assert := require.New(t)

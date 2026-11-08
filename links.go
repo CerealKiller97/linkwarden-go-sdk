@@ -127,18 +127,22 @@ type LinksService struct {
 }
 
 // List returns one page of links matching opts. To get the next page, set
-// opts.Cursor to the ID of the last link returned.
+// opts.Cursor to the ID of the last link returned. It returns nil when nothing
+// matches.
+//
+// It calls GET /api/v1/search, which takes the same filters: newer Linkwarden
+// versions, including Linkwarden Cloud, reject GET /api/v1/links as deprecated.
 func (s *LinksService) List(ctx context.Context, opts ListLinksOptions) ([]Link, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method: http.MethodGet,
-		path:   "/api/v1/links",
+		path:   "/api/v1/search",
 		query:  opts.toQuery(),
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return decodeResponseEnvelope[[]Link](body)
+	return decodeSearchLinks(body)
 }
 
 // Get returns the link with the given ID.

@@ -30,6 +30,13 @@ How to write an entry:
 
 🧪 Tested against Linkwarden: v2.16.3
 
+### 🐛 Fixed
+
+- `Links.List` calls `GET /api/v1/search` instead of `GET /api/v1/links`, which newer
+  Linkwarden versions (including Linkwarden Cloud) reject with `400 This route is
+  deprecated`. Filters, sorting and the cursor work as before, and a page with no links
+  is now `nil`.
+
 ## [1.0.0] - 2026-11-03
 
 🧪 Tested against Linkwarden: v2.16.3

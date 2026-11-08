@@ -30,6 +30,10 @@ How to write an entry:
 
 🧪 Tested against Linkwarden: v2.16.3
 
+## [1.0.1] - 2026-11-08
+
+🧪 Tested against Linkwarden: v2.16.3
+
 ### 🐛 Fixed
 
 - `Links.List` calls `GET /api/v1/search` instead of `GET /api/v1/links`, which newer
@@ -54,5 +58,6 @@ How to write an entry:
   `IsConflict` helpers.
 - Doc comments on every exported method and type.
 
-[unreleased]: https://github.com/CerealKiller97/linkwarden-go-sdk/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/CerealKiller97/linkwarden-go-sdk/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/CerealKiller97/linkwarden-go-sdk/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/CerealKiller97/linkwarden-go-sdk/releases/tag/v1.0.0

@@ -30,6 +30,12 @@ How to write an entry:
 
 🧪 Tested against Linkwarden: v2.17.0
 
+## [1.1.0] - 2026-11-11
+
+🧪 Tested against Linkwarden: v2.17.0
+
+🎉 Support for Linkwarden v2.17.0.
+
 ### ✨ Added
 
 - `Links.Reorder` moves a link within its collection's custom order
@@ -83,6 +89,7 @@ How to write an entry:
   `IsConflict` helpers.
 - Doc comments on every exported method and type.
 
-[unreleased]: https://github.com/CerealKiller97/linkwarden-go-sdk/compare/v1.0.1...HEAD
+[unreleased]: https://github.com/CerealKiller97/linkwarden-go-sdk/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/CerealKiller97/linkwarden-go-sdk/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/CerealKiller97/linkwarden-go-sdk/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/CerealKiller97/linkwarden-go-sdk/releases/tag/v1.0.0

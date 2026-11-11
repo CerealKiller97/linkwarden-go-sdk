@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -123,6 +124,44 @@ func TestNewAPIErrorFallsBackToStatusText(t *testing.T) {
 
 	// Assert
 	assert.Equal(http.StatusText(http.StatusInternalServerError), err.Message)
+}
+
+func TestNewAPIErrorReadsCode(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
+
+	// Act
+	err := newAPIError(http.StatusTooManyRequests, []byte(`{"response":"Too many incorrect passwords.","code":"TOO_MANY_ATTEMPTS"}`))
+
+	// Assert
+	assert.Equal("Too many incorrect passwords.", err.Message)
+	assert.Equal(ErrorCodeTooManyAttempts, err.Code)
+	assert.True(IsTooManyRequests(err))
+}
+
+func TestParseRetryAfter(t *testing.T) {
+	tests := map[string]struct {
+		header string
+		want   time.Duration
+	}{
+		"Seconds":  {header: "25", want: 25 * time.Second},
+		"Missing":  {header: "", want: 0},
+		"HTTPDate": {header: "Wed, 21 Oct 2015 07:28:00 GMT", want: 0},
+		"Negative": {header: "-1", want: 0},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Arrange
+			assert := require.New(t)
+
+			// Act
+			got := parseRetryAfter(tt.header)
+
+			// Assert
+			assert.Equal(tt.want, got)
+		})
+	}
 }
 
 func TestDecodeResponseEnvelope(t *testing.T) {

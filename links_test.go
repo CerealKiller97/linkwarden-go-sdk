@@ -1,6 +1,7 @@
 package linkwarden
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -317,6 +318,70 @@ func TestLinksServiceHighlights(t *testing.T) {
 	assert.NoError(err)
 	assert.Len(highlights, 1)
 	assert.Equal(created.ID, highlights[0].ID)
+}
+
+func TestLinksServiceReorderToTop(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	oldest := createTestLink(t, client, collection.ID)
+	middle := createTestLink(t, client, collection.ID)
+	newest := createTestLink(t, client, collection.ID)
+
+	// Act
+	moved, err := client.Links.Reorder(t.Context(), oldest.ID, ReorderLinkRequest{})
+
+	// Assert
+	assert.NoError(err)
+	assert.Equal(oldest.ID, moved.ID)
+	assert.Greater(moved.CollectionOrder, 0.0)
+	assert.Equal([]int{oldest.ID, newest.ID, middle.ID}, listInCustomOrder(t, client, collection.ID))
+}
+
+func TestLinksServiceReorderBelowLink(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
+	client := newTestClient(t)
+	collection := createTestCollection(t, client)
+	oldest := createTestLink(t, client, collection.ID)
+	middle := createTestLink(t, client, collection.ID)
+	newest := createTestLink(t, client, collection.ID)
+
+	// Act
+	_, err := client.Links.Reorder(t.Context(), newest.ID, ReorderLinkRequest{BeforeID: oldest.ID})
+
+	// Assert
+	assert.NoError(err)
+	assert.Equal([]int{middle.ID, oldest.ID, newest.ID}, listInCustomOrder(t, client, collection.ID))
+}
+
+func TestLinksServiceReorderAcrossCollectionsFails(t *testing.T) {
+	// Arrange
+	assert := require.New(t)
+	client := newTestClient(t)
+	link := createTestLink(t, client, createTestCollection(t, client).ID)
+	other := createTestLink(t, client, createTestCollection(t, client).ID)
+
+	// Act
+	_, err := client.Links.Reorder(t.Context(), link.ID, ReorderLinkRequest{BeforeID: other.ID})
+
+	// Assert
+	var apiErr *APIError
+	assert.ErrorAs(err, &apiErr)
+	assert.Equal(http.StatusBadRequest, apiErr.StatusCode)
+}
+
+// listInCustomOrder returns the IDs of the links in a collection, in its custom order.
+func listInCustomOrder(t *testing.T, c *Client, collectionID int) []int {
+	t.Helper()
+	assert := require.New(t)
+
+	sort := SortCustom
+	links, err := c.Links.List(t.Context(), ListLinksOptions{CollectionID: collectionID, Sort: &sort})
+	assert.NoError(err)
+
+	return linkIDs(links)
 }
 
 func deleteTagByName(t *testing.T, c *Client, name string) {

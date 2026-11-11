@@ -13,30 +13,33 @@ import (
 // Subscription, ParentSubscription and DashboardSections are kept as raw JSON since
 // their shapes aren't part of the published API schema.
 type User struct {
-	ID                      int             `json:"id"`
-	Name                    *string         `json:"name,omitempty"`
-	Username                string          `json:"username,omitempty"`
-	Email                   *string         `json:"email,omitempty"`
-	EmailVerified           *string         `json:"emailVerified,omitempty"`
-	UnverifiedNewEmail      *string         `json:"unverifiedNewEmail,omitempty"`
-	Image                   *string         `json:"image,omitempty"`
-	Locale                  string          `json:"locale,omitempty"`
-	CollectionOrder         []int           `json:"collectionOrder,omitempty"`
-	LinksRouteTo            string          `json:"linksRouteTo,omitempty"`
-	PreventDuplicateLinks   bool            `json:"preventDuplicateLinks,omitempty"`
-	ArchiveAsScreenshot     bool            `json:"archiveAsScreenshot,omitempty"`
-	ArchiveAsMonolith       bool            `json:"archiveAsMonolith,omitempty"`
-	ArchiveAsPDF            bool            `json:"archiveAsPDF,omitempty"`
-	ArchiveAsWaybackMachine bool            `json:"archiveAsWaybackMachine,omitempty"`
-	IsPrivate               bool            `json:"isPrivate,omitempty"`
-	ReferredBy              *string         `json:"referredBy,omitempty"`
-	WhitelistedUsers        []string        `json:"whitelistedUsers,omitempty"`
-	HasUnIndexedLinks       bool            `json:"hasUnIndexedLinks,omitempty"`
-	CreatedAt               time.Time       `json:"createdAt,omitzero"`
-	UpdatedAt               time.Time       `json:"updatedAt,omitzero"`
-	DashboardSections       json.RawMessage `json:"dashboardSections,omitempty"`
-	Subscription            json.RawMessage `json:"subscription,omitempty"`
-	ParentSubscription      json.RawMessage `json:"parentSubscription,omitempty"`
+	ID                      int     `json:"id"`
+	Name                    *string `json:"name,omitempty"`
+	Username                string  `json:"username,omitempty"`
+	Email                   *string `json:"email,omitempty"`
+	EmailVerified           *string `json:"emailVerified,omitempty"`
+	UnverifiedNewEmail      *string `json:"unverifiedNewEmail,omitempty"`
+	Image                   *string `json:"image,omitempty"`
+	Locale                  string  `json:"locale,omitempty"`
+	CollectionOrder         []int   `json:"collectionOrder,omitempty"`
+	LinksRouteTo            string  `json:"linksRouteTo,omitempty"`
+	PreventDuplicateLinks   bool    `json:"preventDuplicateLinks,omitempty"`
+	ArchiveAsScreenshot     bool    `json:"archiveAsScreenshot,omitempty"`
+	ArchiveAsMonolith       bool    `json:"archiveAsMonolith,omitempty"`
+	ArchiveAsPDF            bool    `json:"archiveAsPDF,omitempty"`
+	ArchiveAsWaybackMachine bool    `json:"archiveAsWaybackMachine,omitempty"`
+	IsPrivate               bool    `json:"isPrivate,omitempty"`
+	// ShareUsageAnalytics is whether Linkwarden Cloud records usage analytics for the
+	// account. Self-hosted instances don't record any. Linkwarden v2.17 or later.
+	ShareUsageAnalytics bool            `json:"shareUsageAnalytics,omitempty"`
+	ReferredBy          *string         `json:"referredBy,omitempty"`
+	WhitelistedUsers    []string        `json:"whitelistedUsers,omitempty"`
+	HasUnIndexedLinks   bool            `json:"hasUnIndexedLinks,omitempty"`
+	CreatedAt           time.Time       `json:"createdAt,omitzero"`
+	UpdatedAt           time.Time       `json:"updatedAt,omitzero"`
+	DashboardSections   json.RawMessage `json:"dashboardSections,omitempty"`
+	Subscription        json.RawMessage `json:"subscription,omitempty"`
+	ParentSubscription  json.RawMessage `json:"parentSubscription,omitempty"`
 }
 
 // CreateUserRequest is the payload for UsersService.Create. Whether Email or
@@ -63,9 +66,10 @@ type UpdateUserRequest struct {
 	ArchiveAsMonolith       *bool   `json:"archiveAsMonolith,omitempty"`
 	ArchiveAsWaybackMachine *bool   `json:"archiveAsWaybackMachine,omitempty"`
 	Locale                  *string `json:"locale,omitempty"`
-	IsPrivate               *bool   `json:"isPrivate,omitempty"`
-	PreventDuplicateLinks   *bool   `json:"preventDuplicateLinks,omitempty"`
-	CollectionOrder         []int   `json:"collectionOrder,omitempty"`
+	// Deprecated: Linkwarden v2.17 and later ignore isPrivate.
+	IsPrivate             *bool `json:"isPrivate,omitempty"`
+	PreventDuplicateLinks *bool `json:"preventDuplicateLinks,omitempty"`
+	CollectionOrder       []int `json:"collectionOrder,omitempty"`
 	// LinksRouteTo is "ORIGINAL" or "CUSTOM".
 	LinksRouteTo     *string  `json:"linksRouteTo,omitempty"`
 	WhitelistedUsers []string `json:"whitelistedUsers,omitempty"`
@@ -82,6 +86,10 @@ type UserPreferences struct {
 	ReadableFontSize   string `json:"readableFontSize,omitempty"`
 	ReadableLineHeight string `json:"readableLineHeight,omitempty"`
 	ReadableLineWidth  string `json:"readableLineWidth,omitempty"`
+	// ShareUsageAnalytics is whether Linkwarden Cloud records usage analytics for the
+	// account. Self-hosted instances don't record any. As a request, nil leaves it
+	// unchanged. Linkwarden v2.17 or later.
+	ShareUsageAnalytics *bool `json:"shareUsageAnalytics,omitempty"`
 }
 
 // UsersService accesses the /api/v1/users endpoints.
@@ -162,6 +170,10 @@ func (s *UsersService) Get(ctx context.Context, id int) (*User, error) {
 // Update changes the fields set in req and keeps the rest. The API applies the update
 // to the authenticated user and requires a username, so when req.Username is nil
 // Update sends the user's current one.
+//
+// Since Linkwarden v2.17, changing the password signs the user out everywhere else
+// and revokes their access tokens, and a wrong req.Password or req.OldPassword counts
+// toward the same wrong-password limit as SessionService.Create.
 func (s *UsersService) Update(ctx context.Context, id int, req UpdateUserRequest) (*User, error) {
 	if req.Username == nil {
 		me, err := s.Me(ctx)

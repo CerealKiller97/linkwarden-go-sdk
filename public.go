@@ -21,7 +21,8 @@ type PublicUser struct {
 
 // ListPublicLinksOptions filters/paginates PublicService.CollectionLinks.
 type ListPublicLinksOptions struct {
-	// Sort is left nil to omit the query parameter and let the API pick its default.
+	// Sort is one of the Sort constants. It's left nil to omit the query parameter and
+	// let the API pick its default.
 	Sort              *int
 	Cursor            int
 	PinnedOnly        bool

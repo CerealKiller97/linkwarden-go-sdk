@@ -153,14 +153,19 @@ func TestUsersServiceUpdatePreferences(t *testing.T) {
 	user, password := createTestUser(t, client)
 	asUser := signInAs(t, client, user, password)
 
+	shareUsageAnalytics := false
+
 	// Act
 	prefs, err := asUser.Users.UpdatePreferences(t.Context(), user.ID, UserPreferences{
-		Theme:            "light",
-		ReadableFontSize: "18px",
+		Theme:               "light",
+		ReadableFontSize:    "18px",
+		ShareUsageAnalytics: &shareUsageAnalytics,
 	})
 
 	// Assert
 	assert.NoError(err)
 	assert.Equal("light", prefs.Theme)
 	assert.Equal("18px", prefs.ReadableFontSize)
+	assert.NotNil(prefs.ShareUsageAnalytics)
+	assert.False(*prefs.ShareUsageAnalytics)
 }

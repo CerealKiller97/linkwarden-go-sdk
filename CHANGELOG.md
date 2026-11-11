@@ -28,7 +28,32 @@ How to write an entry:
 
 ## [Unreleased]
 
-🧪 Tested against Linkwarden: v2.16.3
+🧪 Tested against Linkwarden: v2.17.0
+
+### ✨ Added
+
+- `Links.Reorder` moves a link within its collection's custom order
+  (`PUT /api/v1/links/{id}/order`), and `Link.CollectionOrder` holds its position.
+- `SortDateNewestFirst`, `SortDateOldestFirst`, `SortNameAZ`, `SortNameZA` and the new
+  `SortCustom` constants for the `Sort` option of link lists and searches.
+- `Session.Delete` signs out by revoking the client's session token
+  (`DELETE /api/v1/session`).
+- `CreateSessionRequest.Code` and `Auth.RequestVerificationEmail` for verifying a new
+  account's email with the 6-digit code Linkwarden now emails.
+- `APIError.Code` holds the API's machine-readable error code (`ErrorCodeEmailNotVerified`,
+  `ErrorCodeInvalidVerificationCode`, `ErrorCodeTooManyAttempts`), `APIError.RetryAfter`
+  the `Retry-After` of a 429, and `IsTooManyRequests` checks for one.
+- `ShareUsageAnalytics` on `User` and `UserPreferences`.
+
+### ⚠️ Deprecated
+
+- `UpdateUserRequest.IsPrivate`: Linkwarden v2.17 ignores it.
+
+### 🔄 Changed
+
+- Tested against Linkwarden v2.17.0. `Auth.ForgotPassword` now succeeds for any email,
+  and changing or resetting a password signs the user out elsewhere and revokes their
+  access tokens.
 
 ## [1.0.1] - 2026-11-08
 

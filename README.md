@@ -72,28 +72,28 @@ func main() {
 
 ### Services
 
-| Service              | What it covers                                        |
-| -------------------- | ----------------------------------------------------- |
-| `client.Links`       | CRUD, bulk update/delete, archive, highlights         |
-| `client.Collections` | CRUD, nesting, sharing                                |
-| `client.Tags`        | List, bulk create, rename, delete                     |
-| `client.Search`      | Full-text link search                                 |
-| `client.Archives`    | Get and upload PNG / JPEG / PDF / Readability / HTML  |
-| `client.Migrations`  | Export and import (Linkwarden, HTML, Pocket, …)       |
-| `client.RSS`         | Feed subscriptions                                    |
-| `client.Highlights`  | Create and delete highlights                          |
-| `client.Tokens`      | Create, list, revoke API tokens                       |
-| `client.Dashboard`   | v1/v2 dashboard data and layout                       |
-| `client.Config`      | Public instance configuration                         |
-| `client.Favicon`     | Favicon lookup for any URL                            |
-| `client.Users`       | Current user, registration, profile and preferences   |
-| `client.Session`     | Sign in with username and password for a token        |
-| `client.Auth`        | Password reset and email verification                 |
-| `client.Logins`      | Sign-in methods the instance offers                   |
-| `client.Public`      | Read-only access to public collections, links, users  |
-| `client.Avatar`      | User avatar images                                    |
-| `client.Preserved`   | Signed URLs for archives on the user content domain   |
-| `client.Worker`      | Preservation queue stats and resets (admin only)      |
+| Service              | What it covers                                         |
+| -------------------- | ------------------------------------------------------ |
+| `client.Links`       | CRUD, bulk update/delete, reorder, archive, highlights |
+| `client.Collections` | CRUD, nesting, sharing                                 |
+| `client.Tags`        | List, bulk create, rename, delete                      |
+| `client.Search`      | Full-text link search                                  |
+| `client.Archives`    | Get and upload PNG / JPEG / PDF / Readability / HTML   |
+| `client.Migrations`  | Export and import (Linkwarden, HTML, Pocket, …)        |
+| `client.RSS`         | Feed subscriptions                                     |
+| `client.Highlights`  | Create and delete highlights                           |
+| `client.Tokens`      | Create, list, revoke API tokens                        |
+| `client.Dashboard`   | v1/v2 dashboard data and layout                        |
+| `client.Config`      | Public instance configuration                          |
+| `client.Favicon`     | Favicon lookup for any URL                             |
+| `client.Users`       | Current user, registration, profile and preferences    |
+| `client.Session`     | Sign in for a session token, and sign out              |
+| `client.Auth`        | Password reset and email verification codes            |
+| `client.Logins`      | Sign-in methods the instance offers                    |
+| `client.Public`      | Read-only access to public collections, links, users   |
+| `client.Avatar`      | User avatar images                                     |
+| `client.Preserved`   | Signed URLs for archives on the user content domain    |
+| `client.Worker`      | Preservation queue stats and resets (admin only)       |
 
 Options: `WithHTTPClient(*http.Client)` for timeouts, proxies or custom transports, and `WithLogger(*slog.Logger)` for internal diagnostics. The client is silent by default: it discards all log output unless you pass a logger. The SDK depends only on the standard library.
 
@@ -149,6 +149,10 @@ link, err := client.Links.Update(ctx, 412, linkwarden.UpdateLinkRequest{
 	Name: "Effective Go (updated)",
 	Tags: []linkwarden.Tag{{Name: "golang"}},
 })
+
+// Move a link to the top of its collection's custom order, or below another link.
+_, err = client.Links.Reorder(ctx, 412, linkwarden.ReorderLinkRequest{})
+_, err = client.Links.Reorder(ctx, 418, linkwarden.ReorderLinkRequest{BeforeID: 412})
 
 // Re-run the archiver (screenshot, PDF, readability…) for a link.
 err = client.Links.Archive(ctx, 412)
@@ -361,7 +365,15 @@ if err != nil {
 
 client := linkwarden.New(baseURL, token)
 me, err := client.Users.Me(ctx)
+
+// Revoke the session token when you're done with it.
+err = client.Session.Delete(ctx)
 ```
+
+An account whose email isn't verified yet fails with `APIError.Code ==
+linkwarden.ErrorCodeEmailNotVerified`, and Linkwarden emails a 6-digit code: call
+`Session.Create` again with it in `Code`. After too many wrong passwords it fails with
+`ErrorCodeTooManyAttempts`, and `APIError.RetryAfter` says how long to wait.
 
 </details>
 

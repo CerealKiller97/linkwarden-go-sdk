@@ -45,8 +45,12 @@ func TestSearchServiceLinksNoMatches(t *testing.T) {
 	assert := require.New(t)
 	client := newTestClient(t)
 
+	// One made-up word: Meilisearch matches each word of a query on its own, so a real
+	// word like "nothing" can match the archived text of some link.
+	query := strings.ReplaceAll(uniqueName("zqxjv"), "-", "")
+
 	// Act
-	links, err := client.Search.Links(t.Context(), SearchOptions{SearchQueryString: uniqueName("nothing")})
+	links, err := client.Search.Links(t.Context(), SearchOptions{SearchQueryString: query})
 
 	// Assert
 	assert.NoError(err)

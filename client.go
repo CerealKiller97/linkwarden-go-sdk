@@ -170,7 +170,10 @@ func (c *Client) request(ctx context.Context, opt requestOptions) (*http.Respons
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return resp, respBody, newAPIError(resp.StatusCode, respBody)
+		apiErr := newAPIError(resp.StatusCode, respBody)
+		apiErr.RetryAfter = parseRetryAfter(resp.Header.Get("Retry-After"))
+
+		return resp, respBody, apiErr
 	}
 
 	return resp, respBody, nil

@@ -17,29 +17,33 @@ type Tag struct {
 
 // Link is a Linkwarden bookmark.
 type Link struct {
-	ID            int        `json:"id,omitempty"`
-	Name          string     `json:"name"`
-	Type          string     `json:"type,omitempty"`
-	Description   string     `json:"description,omitempty"`
-	CreatedByID   int        `json:"createdById,omitempty"`
-	CollectionID  int        `json:"collectionId,omitempty"`
-	Icon          string     `json:"icon,omitempty"`
-	IconWeight    string     `json:"iconWeight,omitempty"`
-	Color         string     `json:"color,omitempty"`
-	URL           string     `json:"url"`
-	TextContent   string     `json:"textContent,omitempty"`
-	Preview       string     `json:"preview,omitempty"`
-	Image         string     `json:"image,omitempty"`
-	PDF           string     `json:"pdf,omitempty"`
-	Readable      string     `json:"readable,omitempty"`
-	Monolith      string     `json:"monolith,omitempty"`
-	LastPreserved time.Time  `json:"lastPreserved,omitzero"`
-	ImportDate    *time.Time `json:"importDate,omitempty"`
-	CreatedAt     time.Time  `json:"createdAt,omitzero"`
-	UpdatedAt     time.Time  `json:"updatedAt,omitzero"`
-	Tags          []Tag      `json:"tags,omitempty"`
-	Collection    Collection `json:"collection,omitzero"`
-	PinnedBy      []PinnedBy `json:"pinnedBy,omitempty"`
+	ID           int    `json:"id,omitempty"`
+	Name         string `json:"name"`
+	Type         string `json:"type,omitempty"`
+	Description  string `json:"description,omitempty"`
+	CreatedByID  int    `json:"createdById,omitempty"`
+	CollectionID int    `json:"collectionId,omitempty"`
+	Icon         string `json:"icon,omitempty"`
+	IconWeight   string `json:"iconWeight,omitempty"`
+	Color        string `json:"color,omitempty"`
+	URL          string `json:"url"`
+	TextContent  string `json:"textContent,omitempty"`
+	Preview      string `json:"preview,omitempty"`
+	Image        string `json:"image,omitempty"`
+	PDF          string `json:"pdf,omitempty"`
+	Readable     string `json:"readable,omitempty"`
+	Monolith     string `json:"monolith,omitempty"`
+	// CollectionOrder places the link in its collection's custom order: higher comes
+	// first. Only its order relative to other links in the same collection means
+	// anything. Change it with LinksService.Reorder. Linkwarden v2.17 or later.
+	CollectionOrder float64    `json:"collectionOrder,omitempty"`
+	LastPreserved   time.Time  `json:"lastPreserved,omitzero"`
+	ImportDate      *time.Time `json:"importDate,omitempty"`
+	CreatedAt       time.Time  `json:"createdAt,omitzero"`
+	UpdatedAt       time.Time  `json:"updatedAt,omitzero"`
+	Tags            []Tag      `json:"tags,omitempty"`
+	Collection      Collection `json:"collection,omitzero"`
+	PinnedBy        []PinnedBy `json:"pinnedBy,omitempty"`
 }
 
 // CreateLinkRequest is the payload for LinksService.Create.
@@ -66,9 +70,23 @@ type UpdateLinkRequest struct {
 	PinnedBy    []PinnedBy `json:"pinnedBy,omitempty"`
 }
 
+// Sort orders for links, for the Sort field of ListLinksOptions, SearchOptions and
+// ListPublicLinksOptions.
+const (
+	SortDateNewestFirst = 0
+	SortDateOldestFirst = 1
+	SortNameAZ          = 2
+	SortNameZA          = 3
+	// SortCustom is the order set with LinksService.Reorder. It only applies when
+	// listing a single collection; otherwise links come newest first. Linkwarden
+	// v2.17 or later.
+	SortCustom = 4
+)
+
 // ListLinksOptions filters/paginates LinksService.List.
 type ListLinksOptions struct {
-	// Sort is left nil to omit the query parameter and let the API pick its default.
+	// Sort is one of the Sort constants. It's left nil to omit the query parameter and
+	// let the API pick its default.
 	Sort              *int
 	Cursor            int
 	CollectionID      int
@@ -119,6 +137,13 @@ type Highlight struct {
 	Text        string    `json:"text"`
 	CreatedAt   time.Time `json:"createdAt,omitzero"`
 	UpdatedAt   time.Time `json:"updatedAt,omitzero"`
+}
+
+// ReorderLinkRequest is the payload for LinksService.Reorder.
+type ReorderLinkRequest struct {
+	// BeforeID is the link the moved one should end up directly below, in the same
+	// collection. Leave it at 0 to move the link to the top of its collection.
+	BeforeID int `json:"beforeId,omitempty"`
 }
 
 // LinksService accesses the /api/v1/links endpoints.
@@ -328,6 +353,27 @@ func (s *LinksService) DeleteArchive(ctx context.Context, ids []int) error {
 	})
 
 	return err
+}
+
+// Reorder moves the link with the given ID within its collection's custom order (see
+// SortCustom) and returns the updated link. It needs permission to update links in
+// that collection. Requires Linkwarden v2.17 or later.
+func (s *LinksService) Reorder(ctx context.Context, id int, req ReorderLinkRequest) (*Link, error) {
+	_, body, err := s.c.request(ctx, requestOptions{
+		method:   http.MethodPut,
+		path:     "/api/v1/links/" + strconv.Itoa(id) + "/order",
+		jsonBody: req,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	link, err := decodeResponseEnvelope[Link](body)
+	if err != nil {
+		return nil, err
+	}
+
+	return &link, nil
 }
 
 // Highlights returns the highlights on the link with the given ID.

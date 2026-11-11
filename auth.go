@@ -13,6 +13,9 @@ type AuthService struct {
 }
 
 // ForgotPassword sends a password reset email to the account with the given email.
+// Since Linkwarden v2.17 it succeeds whether or not an account has that email, so
+// the answer doesn't reveal which emails are registered. Resetting the password signs
+// the user out everywhere.
 func (s *AuthService) ForgotPassword(ctx context.Context, email string) (string, error) {
 	_, body, err := s.c.request(ctx, requestOptions{
 		method:   http.MethodPost,
@@ -41,7 +44,26 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, password string)
 	return decodeResponseEnvelope[string](body)
 }
 
-// VerifyEmail confirms an email address using the token from the verification email.
+// RequestVerificationEmail emails a 6-digit verification code to the unverified
+// account with the given email address or username. Sign in with that code in
+// CreateSessionRequest.Code to verify the email. It fails with a 400 APIError when
+// the instance has no email server configured or the email is already verified.
+func (s *AuthService) RequestVerificationEmail(ctx context.Context, emailOrUsername string) (string, error) {
+	_, body, err := s.c.request(ctx, requestOptions{
+		method:   http.MethodPost,
+		path:     "/api/v1/auth/request-verification-email",
+		jsonBody: map[string]any{"email": emailOrUsername},
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return decodeResponseEnvelope[string](body)
+}
+
+// VerifyEmail confirms a new email address after an email change, using the token
+// from the verification email. Since Linkwarden v2.17, a new account's email is
+// verified with a code instead: see RequestVerificationEmail.
 func (s *AuthService) VerifyEmail(ctx context.Context, token string) (string, error) {
 	q := url.Values{}
 	q.Set("token", token)

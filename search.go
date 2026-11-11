@@ -12,7 +12,8 @@ import (
 // SearchOptions filters/paginates SearchService.Links.
 type SearchOptions struct {
 	SearchQueryString string
-	// Sort is left nil to omit the query parameter and let the API pick its default.
+	// Sort is one of the Sort constants. It's left nil to omit the query parameter and
+	// let the API pick its default.
 	Sort   *int
 	Cursor int
 }
